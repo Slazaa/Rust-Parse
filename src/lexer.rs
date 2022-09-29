@@ -47,9 +47,9 @@ impl<'a> LexerStream<'a> {
 
 	pub fn update_pos(&mut self, mat: &Match) {
 		*self.pos.idx_mut() += mat.end();
-		*self.pos.line_mut() += self.input.matches("\n").count();
-		*self.pos.col_mut() += match self.input.rfind("\n") {
-			Some(last_nl) => mat.start() - last_nl,
+		*self.pos.line_mut() += mat.as_str().matches("\n").count();
+		*self.pos.col_mut() += match self.input[..mat.start()].rfind("\n") {
+			Some(last_nl) => self.pos.idx() - last_nl,
 			None => mat.end()
 		};
 		self.input = &self.input[mat.end()..];

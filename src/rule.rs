@@ -1,15 +1,15 @@
 use regex::Regex;
 
 #[derive(Clone)]
-pub struct Rule<'a> {
-	name: &'a str,
+pub struct Rule {
+	name: String,
 	pattern: Regex
 }
 
-impl<'a> Rule<'a> {
-	pub fn new(name: &'a str, pattern: &str) -> Result<Self, ()> {
+impl Rule {
+	pub fn new(name: &str, pattern: &str) -> Result<Self, ()> {
 		Ok(Self {
-			name,
+			name: name.to_owned(),
 			pattern: match Regex::new(pattern) {
 				Ok(x) => x,
 				Err(_) => return Err(())
@@ -17,8 +17,8 @@ impl<'a> Rule<'a> {
 		})
 	}
 
-	pub fn name(&self) -> &'a str {
-		self.name
+	pub fn name(&self) -> &String {
+		&self.name
 	}
 
 	pub fn pattern(&self) -> &Regex {

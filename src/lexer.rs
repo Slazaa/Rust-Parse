@@ -2,44 +2,45 @@ use regex::Match;
 
 use crate::{Rule, Token, Position};
 
-pub struct Lexer<'a> {
-	rules: Vec<Rule<'a>>,
-	ignore_rules: Vec<Rule<'a>>,
+#[derive(Clone)]
+pub struct Lexer {
+	rules: Vec<Rule>,
+	ignore_rules: Vec<Rule>,
 }
 
-impl<'a> Lexer<'a> {
-	pub fn new(rules: Vec<Rule<'a>>, ignore_rules: Vec<Rule<'a>>) -> Self {
+impl Lexer {
+	pub fn new(rules: Vec<Rule>, ignore_rules: Vec<Rule>) -> Self {
 		Self {
 			rules,
 			ignore_rules,
 		}
 	}
 
-	pub fn rules(&self) -> &Vec<Rule<'a>> {
+	pub fn rules(&self) -> &Vec<Rule> {
 		&self.rules
 	}
 
-	pub fn ignore_rules(&self) -> &Vec<Rule<'a>> {
+	pub fn ignore_rules(&self) -> &Vec<Rule> {
 		&self.ignore_rules
 	}
 
-	pub fn lex(&self, input: &'a str) -> LexerStream {
+	pub fn lex(&self, input: &str) -> LexerStream {
 		LexerStream::new(&self, input)
 	}
 }
 
-pub struct LexerStream<'a> {
-	lexer: &'a Lexer<'a>,
-	input: &'a str,
+pub struct LexerStream {
+	lexer: Lexer,
+	input: String,
 	pos: Position,
 	start_pos: Position
 }
 
-impl<'a> LexerStream<'a> {
-	pub fn new(lexer: &'a Lexer<'a>, input: &'a str) -> Self {
+impl LexerStream {
+	pub fn new(lexer: &Lexer, input: &str) -> Self {
 		Self {
-			lexer,
-			input,
+			lexer: lexer.clone(),
+			input: input.to_owned(),
 			pos: Position::new(0, 1, 1),
 			start_pos: Position::new(0, 1, 1)
 		}
@@ -52,12 +53,12 @@ impl<'a> LexerStream<'a> {
 			Some(last_nl) => self.pos.idx() - last_nl,
 			None => mat.end()
 		};
-		self.input = &self.input[mat.end()..];
+		self.input = self.input[mat.end()..].to_owned();
 	}
 }
 
-impl<'a> Iterator for LexerStream<'a> {
-	type Item = Result<Token<'a>, (String, Position)>;
+impl Iterator for LexerStream {
+	type Item = Result<Token, (String, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.start_pos = self.pos.clone();
@@ -70,7 +71,7 @@ impl<'a> Iterator for LexerStream<'a> {
 			let mut found_mat = false;
 
 			for rule in self.lexer.ignore_rules() {
-				if let Some(mat) = rule.pattern().find(self.input) {
+				if let Some(mat) = rule.pattern().find(&self.input.clone()) {
 					found_mat = true;
 					self.update_pos(&mat);
 					break;
@@ -83,9 +84,10 @@ impl<'a> Iterator for LexerStream<'a> {
 		}
 
 		for rule in self.lexer.rules() {
-			if let Some(mat) = rule.pattern().find(self.input) {
+			if let Some(mat) = rule.pattern().find(&self.input.clone()) {
+				let rule_name = rule.name().clone();
 				self.update_pos(&mat);
-				return Some(Ok(Token::new(rule.name(), mat.as_str(), &self.start_pos, &self.pos)));
+				return Some(Ok(Token::new(&rule_name, mat.as_str(), &self.start_pos, &self.pos)));
 			}
 		}
 

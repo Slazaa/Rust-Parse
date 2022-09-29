@@ -48,29 +48,29 @@ impl fmt::Display for Position {
 }
 
 #[derive(Debug)]
-pub struct Token<'a> {
-	name: &'a str,
-	symbol: &'a str,
+pub struct Token {
+	name: String,
+	symbol: String,
 	start_pos: Position,
 	end_pos: Position
 }
 
-impl<'a> Token<'a> {
-	pub fn new(name: &'a str, symbol: &'a str, start_pos: &Position, end_pos: &Position) -> Self {
+impl Token {
+	pub fn new(name: &str, symbol: &str, start_pos: &Position, end_pos: &Position) -> Self {
 		Self {
-			name,
-			symbol,
+			name: name.to_owned(),
+			symbol: symbol.to_owned(),
 			start_pos: start_pos.clone(),
 			end_pos: end_pos.clone()
 		}
 	}
 
-	pub fn name(&self) -> &'a str {
-		self.name
+	pub fn name(&self) -> &String {
+		&self.name
 	}
 
-	pub fn symbol(&self) -> &'a str {
-		self.symbol
+	pub fn symbol(&self) -> &String {
+		&self.symbol
 	}
 
 	pub fn start_pos(&self) -> &Position {

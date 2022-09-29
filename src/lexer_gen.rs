@@ -1,11 +1,11 @@
 use crate::{Rule, Lexer};
 
-pub struct LexerGen<'a> {
-	rules: Vec<Rule<'a>>,
-	ignore_rules: Vec<Rule<'a>>
+pub struct LexerGen {
+	rules: Vec<Rule>,
+	ignore_rules: Vec<Rule>
 }
 
-impl<'a> LexerGen<'a> {
+impl LexerGen {
 	pub fn new() -> Self {
 		Self {
 			rules: Vec::new(),
@@ -13,12 +13,12 @@ impl<'a> LexerGen<'a> {
 		}
 	}
 
-	pub fn add(&mut self, name: &'a str, pattern: &'a str) -> Result<(), ()> {
+	pub fn add(&mut self, name: &str, pattern: &str) -> Result<(), ()> {
 		self.rules.push(Rule::new(name, pattern)?);
 		Ok(())
 	}
 
-	pub fn add_vec(&mut self, rules: &[(&'a str, &'a str)]) -> Result<(), String> {
+	pub fn add_vec(&mut self, rules: &[(&str, &str)]) -> Result<(), String> {
 		for (name, pattern) in rules {
 			if self.add(name, pattern).is_err() {
 				return Err(format!("Invalid regex '{}'", pattern))
@@ -28,12 +28,12 @@ impl<'a> LexerGen<'a> {
 		Ok(())
 	}
 
-	pub fn ignore(&mut self, pattern: &'a str) -> Result<(), ()> {
+	pub fn ignore(&mut self, pattern: &str) -> Result<(), ()> {
 		self.ignore_rules.push(Rule::new("", pattern)?);
 		Ok(())
 	}
 
-	pub fn ignore_vec(&mut self, rules: &[&'a str]) -> Result<(), String> {
+	pub fn ignore_vec(&mut self, rules: &[&str]) -> Result<(), String> {
 		for pattern in rules {
 			if self.ignore(pattern).is_err() {
 				return Err(format!("Invalid regex '{}'", pattern))

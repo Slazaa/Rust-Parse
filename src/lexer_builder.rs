@@ -1,11 +1,11 @@
 use crate::{Rule, Lexer};
 
-pub struct LexerGen {
+pub struct LexerBuilder {
 	rules: Vec<Rule>,
 	ignore_rules: Vec<Rule>
 }
 
-impl LexerGen {
+impl LexerBuilder {
 	pub fn new() -> Self {
 		Self {
 			rules: Vec::new(),

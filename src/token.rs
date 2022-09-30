@@ -47,7 +47,7 @@ impl fmt::Display for Position {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Token {
 	name: String,
 	symbol: String,

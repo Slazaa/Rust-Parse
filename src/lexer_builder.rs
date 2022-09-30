@@ -13,14 +13,14 @@ impl LexerBuilder {
 		}
 	}
 
-	pub fn add(&mut self, name: &str, pattern: &str) -> Result<(), ()> {
+	pub fn add_rule(&mut self, name: &str, pattern: &str) -> Result<(), ()> {
 		self.rules.push(Rule::new(name, pattern)?);
 		Ok(())
 	}
 
-	pub fn add_vec(&mut self, rules: &[(&str, &str)]) -> Result<(), String> {
+	pub fn add_rules(&mut self, rules: &[(&str, &str)]) -> Result<(), String> {
 		for (name, pattern) in rules {
-			if self.add(name, pattern).is_err() {
+			if self.add_rule(name, pattern).is_err() {
 				return Err(format!("Invalid regex '{}'", pattern))
 			}
 		}
@@ -28,14 +28,14 @@ impl LexerBuilder {
 		Ok(())
 	}
 
-	pub fn ignore(&mut self, pattern: &str) -> Result<(), ()> {
+	pub fn ignore_rule(&mut self, pattern: &str) -> Result<(), ()> {
 		self.ignore_rules.push(Rule::new("", pattern)?);
 		Ok(())
 	}
 
-	pub fn ignore_vec(&mut self, rules: &[&str]) -> Result<(), String> {
+	pub fn ignore_rules(&mut self, rules: &[&str]) -> Result<(), String> {
 		for pattern in rules {
-			if self.ignore(pattern).is_err() {
+			if self.ignore_rule(pattern).is_err() {
 				return Err(format!("Invalid regex '{}'", pattern))
 			}
 		}

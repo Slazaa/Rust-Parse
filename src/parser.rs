@@ -5,7 +5,7 @@ pub struct Parser {
 }
 
 impl Parser {
-	pub fn parse(&self, lexer_stream: &mut LexerStream) {
+	pub fn parse(&self, lexer_stream: LexerStream) {
 		todo!();
 	}
 }

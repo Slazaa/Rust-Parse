@@ -33,9 +33,16 @@ where
 	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, tokens: &mut Vec<Token>) -> Result<N, (String, Position)> {
 		let patterns: Vec<&Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).collect();
 		let mut added_tokens = 0;
+		let mut expected = Vec::new();
 
 		'pattern_loop: for pattern in patterns {
 			let elems = pattern.elems();
+
+			if let Some(elem) = elems.last() {
+				if !expected.contains(elem) {
+					expected.push(elem.to_owned());
+				}
+			}
 
 			while tokens.len() < elems.len() {
 				match lexer_stream.next() {
@@ -56,7 +63,19 @@ where
 			}
 		}
 
-		Err(("Could not find matching pattern".to_owned(), self.pos))
+		let mut expected_str = String::new();
+
+		for (i, exp) in expected.iter().enumerate() {
+			expected_str.push_str(&format!("'{}'", exp));
+
+			if i + 2 < expected.len() {
+				expected_str.push_str(", ");
+			} else if i + 1 < expected.len() {
+				expected_str.push_str(" or ");
+			}
+		}
+
+		Err((format!("Failed creating '{}' node, expected {}", pattern_name, expected_str), self.pos))
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (String, Position)> {

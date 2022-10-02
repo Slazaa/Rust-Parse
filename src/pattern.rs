@@ -9,14 +9,14 @@ where
 {
 	name: String,
 	elems: Vec<String>,
-	func: fn(&[&N]) -> N
+	func: fn(&[N]) -> N
 }
 
 impl<N> Pattern<N>
 where
 	N: ASTNode
 {
-	pub fn new(name: &str, elems: &[&str], func: fn(&[&N]) -> N) -> Self {
+	pub fn new(name: &str, elems: &[&str], func: fn(&[N]) -> N) -> Self {
 		Self {
 			name: name.to_owned(),
 			elems: elems.iter()
@@ -34,7 +34,7 @@ where
 		&self.elems
 	}
 
-	pub fn func(&self) -> fn(&[&N]) -> N {
+	pub fn func(&self) -> fn(&[N]) -> N {
 		self.func
 	}
 }

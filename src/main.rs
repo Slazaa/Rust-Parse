@@ -31,17 +31,17 @@ impl ASTNode for Node {
 	}
 }
 
-fn expr_num(nodes: &[&Node]) -> Node {
+fn expr_num(nodes: &[Node]) -> Node {
 	Node::Expr(Expr { value: nodes[0].get_token().unwrap().symbol().parse::<f64>().unwrap() })
 }
 
-fn program_empty(nodes: &[&Node]) -> Node {
+fn program_empty(_nodes: &[Node]) -> Node {
 	Node::Program(None)
 }
 
-fn program(nodes: &[&Node]) -> Node {
+fn program(nodes: &[Node]) -> Node {
 	match nodes[0] {
-		Node::Expr(expr) => Node::Program(Some(*expr)),
+		Node::Expr(expr) => Node::Program(Some(expr)),
 		_ => panic!("Invalid node")
 	}
 }

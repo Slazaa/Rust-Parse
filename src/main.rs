@@ -19,11 +19,18 @@ enum Node {
 }
 
 impl ASTNode for Node {
-	fn token(token: &Token) -> Self {
+	fn new_token(token: &Token) -> Self {
 		Self::Token(token.to_owned())
 	}
 
-	fn get_token(&self) -> Result<&Token, String> {
+	fn is_token(&self) -> bool {
+		match self {
+			Self::Token(_) => true,
+			_ => false
+		}
+	}
+
+	fn token(&self) -> Result<&Token, String> {
 		match self {
 			Self::Token(token) => Ok(token),
 			_ => Err("Node is not a token".to_owned())
@@ -32,7 +39,7 @@ impl ASTNode for Node {
 }
 
 fn expr_num(nodes: &[Node]) -> Node {
-	Node::Expr(Expr { value: nodes[0].get_token().unwrap().symbol().parse::<f64>().unwrap() })
+	Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() })
 }
 
 fn program_empty(_nodes: &[Node]) -> Node {

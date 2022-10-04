@@ -1,6 +1,7 @@
 use crate::Token;
 
 pub trait ASTNode {
-	fn token(token: &Token) -> Self;
-	fn get_token(&self) -> Result<&Token, String>;
+	fn new_token(token: &Token) -> Self;
+	fn is_token(&self) -> bool;
+	fn token(&self) -> Result<&Token, String>;
 }

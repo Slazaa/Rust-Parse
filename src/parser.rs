@@ -40,11 +40,17 @@ where
 			nodes.push((pattern.name().to_owned(), N::new_token(&token)));
 		}
 
-		for (elem, (tag, node)) in pattern.elems().iter().zip(nodes.iter()) {
+		let mut pattern_nodes = Vec::new();
 
+		for (elem, (tag, node)) in pattern.elems().iter().zip(nodes.iter()) {
+			if elem != tag {
+				return Err(("Invalid pattern".to_owned(), self.pos));
+			}
+
+			pattern_nodes.push(node.to_owned());
 		}
 
-		todo!();
+		Ok(pattern.func()(&pattern_nodes))
 	}
 
 	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, tokens: &mut Vec<Token>) -> Result<N, (String, Position)> {
@@ -56,7 +62,12 @@ where
 			found_new_pattern = false;
 
 			for pattern in &patterns {
-
+				if let Ok(node) = self.eval_pattern(lexer_stream, &mut nodes, pattern) {
+					nodes = Vec::new();
+					nodes.push((pattern.name().to_owned(), node));
+					found_new_pattern = true;
+					break;
+				}
 			}
 		}
 

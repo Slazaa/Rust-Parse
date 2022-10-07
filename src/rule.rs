@@ -7,12 +7,12 @@ pub struct Rule {
 }
 
 impl Rule {
-	pub fn new(name: &str, pattern: &str) -> Result<Self, ()> {
+	pub fn new(name: &str, pattern: &str) -> Result<Self, String> {
 		Ok(Self {
 			name: name.to_owned(),
 			pattern: match Regex::new(pattern) {
 				Ok(x) => x,
-				Err(_) => return Err(())
+				Err(_) => return Err("Invalid regex".to_owned())
 			}
 		})
 	}

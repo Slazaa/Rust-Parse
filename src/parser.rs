@@ -41,32 +41,34 @@ where
 		    nodes.push((token.name().to_owned(), N::new_token(&token)));
 		}
 
-		for (elem, (tag, node)) in pattern.elems().iter().zip(nodes.clone().iter()) {
+		for ((idx, elem), (tag, node)) in pattern.elems().iter().enumerate().zip(nodes.clone().iter()) {
             if !self.token_names.contains(elem) {
-                let mut pattern_nodes = vec![(tag.to_owned(), node.clone())];
-                let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut pattern_nodes) {
+                let mut eval_nodes = nodes[idx..].to_vec();
+
+                let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes) {
                     Ok(x) => x,
                     Err(e) => {
-                        nodes.append(&mut pattern_nodes);
+                        nodes.append(&mut eval_nodes);
                         return Err(e);
                     }
                 };
 
-                nodes.pop();
+                nodes.drain(idx..);
                 nodes.push((elem.to_owned(), res_node));
+
                 continue;
             } else if elem != tag {
 				return Err(("Invalid pattern".to_owned(), self.pos));
 			}
 
-			nodes.push(node.to_owned());
+			nodes.push((tag.to_owned(), node.to_owned()));
 		}
 
-		Ok(pattern.func()(&nodes))
+		Ok(pattern.func()(&nodes.iter().map(|(_, x)| x.clone()).collect::<Vec<N>>()))
 	}
 
-	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, mut nodes: &mut Vec<(String, N)>) -> Result<N, (String, Position)> {
-		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).map(|x| x.clone()).collect();
+	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, nodes: &mut Vec<(String, N)>) -> Result<N, (String, Position)> {
+		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
         if patterns.is_empty() {
             return Err((format!("Invalid pattern name '{}'", pattern_name), self.pos));
@@ -75,7 +77,7 @@ where
         let mut found_pattern = false;
 
 		for pattern in &patterns {
-			if let Ok(node) = self.eval_pattern(lexer_stream, &mut nodes, pattern) {
+			if let Ok(node) = self.eval_pattern(lexer_stream, nodes, pattern) {
 				*nodes = Vec::new();
 				nodes.push((pattern.name().to_owned(), node));
 				found_pattern = true;
@@ -91,12 +93,15 @@ where
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (String, Position)> {
+	/*
 		let res = self.eval_pattern_by_name(&mut lexer_stream, "program", &mut Vec::new());
-/*
+
 		if lexer_stream.next().is_some() {
 			return Err(("Tokens remaining".to_owned(), self.pos));
 		}
-*/
+
 		res
+	*/
+		self.eval_pattern_by_name(&mut lexer_stream, "program", &mut Vec::new())
 	}
 }

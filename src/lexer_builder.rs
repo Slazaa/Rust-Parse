@@ -13,7 +13,7 @@ impl LexerBuilder {
 		}
 	}
 
-	pub fn add_rule(&mut self, name: &str, pattern: &str) -> Result<(), ()> {
+	pub fn add_rule(&mut self, name: &str, pattern: &str) -> Result<(), String> {
 		self.rules.push(Rule::new(name, pattern)?);
 		Ok(())
 	}
@@ -28,7 +28,7 @@ impl LexerBuilder {
 		Ok(())
 	}
 
-	pub fn ignore_rule(&mut self, pattern: &str) -> Result<(), ()> {
+	pub fn ignore_rule(&mut self, pattern: &str) -> Result<(), String> {
 		self.ignore_rules.push(Rule::new("", pattern)?);
 		Ok(())
 	}
@@ -45,5 +45,11 @@ impl LexerBuilder {
 
 	pub fn build(&self) -> Lexer {
 		Lexer::new(self.rules.clone(), self.ignore_rules.clone())
+	}
+}
+
+impl Default for LexerBuilder {
+	fn default() -> Self {
+		Self::new()
 	}
 }

@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 
 use crate::ASTNode;
 
+pub type PatternFunc<N> = fn(&[N]) -> N;
+
 #[derive(Clone)]
 pub struct Pattern<N>
 where
@@ -9,14 +11,14 @@ where
 {
 	name: String,
 	elems: Vec<String>,
-	func: fn(&[N]) -> N
+	func: PatternFunc<N>
 }
 
 impl<N> Pattern<N>
 where
 	N: ASTNode
 {
-	pub fn new(name: &str, elems: &[&str], func: fn(&[N]) -> N) -> Self {
+	pub fn new(name: &str, elems: &[&str], func: PatternFunc<N>) -> Self {
 		Self {
 			name: name.to_owned(),
 			elems: elems.iter()
@@ -34,7 +36,7 @@ where
 		&self.elems
 	}
 
-	pub fn func(&self) -> fn(&[N]) -> N {
+	pub fn func(&self) -> PatternFunc<N> {
 		self.func
 	}
 }
@@ -59,7 +61,7 @@ where
 		}
 
 		for (self_elem, other_elem) in self.elems.iter().zip(other.elems()) {
-			let elem_ord = self_elem.cmp(&other_elem);
+			let elem_ord = self_elem.cmp(other_elem);
 
 			match elem_ord {
 				Ordering::Equal => (),

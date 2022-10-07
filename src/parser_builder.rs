@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{Parser, Pattern, ASTNode};
+use crate::{Parser, Pattern, ASTNode, PatternFunc};
 
 pub struct ParserBuilder<N>
 where
@@ -23,7 +23,7 @@ where
 		}
 	}
 
-	pub fn add_pattern(&mut self, name: &str, pattern: &str, func: fn(&[N]) -> N) -> Result<(), String> {
+	pub fn add_pattern(&mut self, name: &str, pattern: &str, func: PatternFunc<N>) -> Result<(), String> {
 		if self.token_names.contains(&name.to_owned()) {
 			return Err("Pattern name already a token".to_owned())
 		}
@@ -33,7 +33,7 @@ where
 		Ok(())
 	}
 
-	pub fn add_patterns(&mut self, patterns: &[(&str, &str, fn(&[N]) -> N)]) -> Result<(), String> {
+	pub fn add_patterns(&mut self, patterns: &[(&str, &str, PatternFunc<N>)]) -> Result<(), String> {
 		for (name, pattern, func) in patterns {
 			self.add_pattern(name, pattern, *func)?;
 		}

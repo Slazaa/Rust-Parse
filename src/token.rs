@@ -60,8 +60,8 @@ impl Token {
 		Self {
 			name: name.to_owned(),
 			symbol: symbol.to_owned(),
-			start_pos: start_pos.clone(),
-			end_pos: end_pos.clone()
+			start_pos: *start_pos,
+			end_pos: *end_pos
 		}
 	}
 

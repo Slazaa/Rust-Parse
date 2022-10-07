@@ -28,10 +28,7 @@ impl ASTNode for Node {
 	}
 
 	fn is_token(&self) -> bool {
-        match self {
-            Self::Token(_) => true,
-            _ => false
-        }
+		matches!(self, Self::Token(_))
 	}
 }
 

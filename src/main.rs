@@ -2,10 +2,6 @@ use std::{env, fs};
 
 use parse::{Token, ASTNode};
 
-static TOKEN_NAMES: [&str; 3] = [
-	"ID", "NL", "NUM"
-];
-
 #[derive(Debug, Copy, Clone)]
 struct Expr {
 	pub value: f64
@@ -19,18 +15,11 @@ enum Node {
 }
 
 impl ASTNode for Node {
-	fn new_token(token: &Token) -> Self {
+	fn token(token: &Token) -> Self {
 		Self::Token(token.to_owned())
 	}
 
-	fn is_token(&self) -> bool {
-		match self {
-			Self::Token(_) => true,
-			_ => false
-		}
-	}
-
-	fn token(&self) -> Result<&Token, String> {
+	fn get_token(&self) -> Result<&Token, String> {
 		match self {
 			Self::Token(token) => Ok(token),
 			_ => Err("Node is not a token".to_owned())
@@ -39,7 +28,7 @@ impl ASTNode for Node {
 }
 
 fn expr_num(nodes: &[Node]) -> Node {
-	Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() })
+	Node::Expr(Expr { value: nodes[0].get_token().unwrap().symbol().parse::<f64>().unwrap() })
 }
 
 fn program_empty(_nodes: &[Node]) -> Node {
@@ -86,7 +75,8 @@ fn main() {
 		return;
 	}
 
-	let mut parser_builder = parse::ParserBuilder::<Node>::new(&TOKEN_NAMES);
+	let lexer = lexer_builder.build();
+	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 	
 	if let Err(e) = parser_builder.add_patterns(&[
 		("expr", "NUM", expr_num),
@@ -98,7 +88,6 @@ fn main() {
 	}
 
 	let mut parser = parser_builder.build();
-	let lexer = lexer_builder.build();
 
 	let ast = match parser.parse(lexer.lex(&input)) {
 		Ok(x) => x,

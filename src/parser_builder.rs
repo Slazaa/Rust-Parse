@@ -1,8 +1,10 @@
+use std::fmt::Debug;
+
 use crate::{Parser, Pattern, ASTNode};
 
 pub struct ParserBuilder<N>
 where
-	N: ASTNode + Clone
+	N: ASTNode + Clone + Debug
 {
 	token_names: Vec<String>,
 	patterns: Vec<Pattern<N>>
@@ -10,7 +12,7 @@ where
 
 impl<N> ParserBuilder<N>
 where
-	N: ASTNode + Clone
+	N: ASTNode + Clone + Debug
 {
 	pub fn new(token_names: &[&str]) -> Self {
 		Self {

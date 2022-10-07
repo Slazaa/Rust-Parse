@@ -9,36 +9,45 @@ struct Expr {
 
 #[derive(Debug, Clone)]
 enum Node {
+	Token(Token),
+	// ----------
 	Expr(Expr),
-	Program(Option<Expr>),
-	Token(Token)
+	Program(Option<Expr>)
 }
 
 impl ASTNode for Node {
-	fn token(token: &Token) -> Self {
+	fn new_token(token: &Token) -> Self {
 		Self::Token(token.to_owned())
 	}
 
-	fn get_token(&self) -> Result<&Token, String> {
+	fn token(&self) -> Result<&Token, String> {
 		match self {
 			Self::Token(token) => Ok(token),
 			_ => Err("Node is not a token".to_owned())
 		}
 	}
+
+	fn is_token(&self) -> bool {
+        match self {
+            Self::Token(_) => true,
+            _ => false
+        }
+	}
 }
 
 fn expr_num(nodes: &[Node]) -> Node {
-	Node::Expr(Expr { value: nodes[0].get_token().unwrap().symbol().parse::<f64>().unwrap() })
+	Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() })
 }
 
-fn program_empty(_nodes: &[Node]) -> Node {
-	Node::Program(None)
-}
 
 fn program(nodes: &[Node]) -> Node {
+    if nodes.is_empty() {
+        return Node::Program(None);
+    }
+
 	match nodes[0] {
 		Node::Expr(expr) => Node::Program(Some(expr)),
-		_ => panic!("Invalid node")
+		_ => panic!("Invalid node!")
 	}
 }
 
@@ -80,14 +89,14 @@ fn main() {
 	
 	if let Err(e) = parser_builder.add_patterns(&[
 		("expr", "NUM", expr_num),
-		("program", "", program_empty),
-		("program", "expr", program)
+		("program", "expr", program),
+		("program", "", program)
 	]) {
 		println!("{}", e);
 		return;
 	}
 
-	let mut parser = parser_builder.build();
+    let mut parser = parser_builder.build();
 
 	let ast = match parser.parse(lexer.lex(&input)) {
 		Ok(x) => x,

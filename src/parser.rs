@@ -27,21 +27,23 @@ where
 	}
 
 	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, nodes: &mut Vec<(String, N)>, pattern: &Pattern<N>) -> Result<N, (String, Position)> {
-		if nodes.len() < pattern.elems().len() {
-			let token = match lexer_stream.next() {
-				Some(node) => {
-					match node {
-						Ok(x) => x,
-						Err(e) => return Err(e)
+		for (idx, elem) in pattern.elems().iter().enumerate() {
+			if nodes.len() < pattern.elems().len() {
+				let token = match lexer_stream.next() {
+					Some(node) => {
+						match node {
+							Ok(x) => x,
+							Err(e) => return Err(e)
+						}
 					}
-				}
-				None => return Err(("Not enough token".to_owned(), self.pos))
-			};
+					None => return Err(("Not enough token".to_owned(), self.pos))
+				};
+	
+				nodes.push((token.name().to_owned(), N::new_token(&token)));
+			}
 
-		    nodes.push((token.name().to_owned(), N::new_token(&token)));
-		}
+			let (tag, node) = &nodes[idx];
 
-		for ((idx, elem), (tag, node)) in pattern.elems().iter().enumerate().zip(nodes.clone().iter()) {
             if !self.token_names.contains(elem) {
                 let mut eval_nodes = nodes[idx..].to_vec();
 
@@ -64,7 +66,10 @@ where
 			nodes.push((tag.to_owned(), node.to_owned()));
 		}
 
-		Ok(pattern.func()(&nodes.iter().map(|(_, x)| x.clone()).collect::<Vec<N>>()))
+		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x.clone()).collect::<Vec<N>>()) {
+			Ok(x) => Ok(x),
+			Err(e) => Err((e, self.pos))
+		}
 	}
 
 	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, nodes: &mut Vec<(String, N)>) -> Result<N, (String, Position)> {

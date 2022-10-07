@@ -32,19 +32,42 @@ impl ASTNode for Node {
 	}
 }
 
-fn expr_num(nodes: &[Node]) -> Node {
-	Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() })
+fn expr_num(nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() }))
 }
 
+fn expr_op(nodes: &[Node]) -> Result<Node, String> {
+	let left = match &nodes[0] {
+		Node::Expr(x) => x,
+		_ => return Err("Invalid node".to_owned())
+	};
 
-fn program(nodes: &[Node]) -> Node {
+	let op = match &nodes[1] {
+		Node::Token(x) => x,
+		_ => return Err("Invalid node".to_owned())
+	};
+
+	let right = match &nodes[2] {
+		Node::Expr(x) => x,
+		_ => return Err("Invalid node".to_owned())
+	};
+
+	let value = match op.name().as_str() {
+		"PLUS" => left.value + right.value,
+		_ => return Err("Invalid operator".to_owned())
+	};
+
+	Ok(Node::Expr(Expr { value }))
+}
+
+fn program(nodes: &[Node]) -> Result<Node, String> {
     if nodes.is_empty() {
-        return Node::Program(None);
+        return Ok(Node::Program(None));
     }
 
 	match nodes[0] {
-		Node::Expr(expr) => Node::Program(Some(expr)),
-		_ => panic!("Invalid node!")
+		Node::Expr(expr) =>Ok(Node::Program(Some(expr))),
+		_ => Err("Invalid node!".to_owned())
 	}
 }
 
@@ -75,7 +98,8 @@ fn main() {
 	if let Err(e) = lexer_builder.add_rules(&[
 		("ID", r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
 		("NL", r"(^[\r\n]+)"),
-		("NUM", r"(^\d+(\.\d+)?)")
+		("NUM", r"(^\d+(\.\d+)?)"),
+		("PLUS", r"(^+)")
 	]) {
 		println!("{}", e);
 		return;
@@ -86,13 +110,14 @@ fn main() {
 	
 	if let Err(e) = parser_builder.add_patterns(&[
 		("expr", "NUM", expr_num),
+		("expr", "expr PLUS expr", expr_op),
 		("program", "expr", program),
 		("program", "", program)
 	]) {
 		println!("{}", e);
 		return;
 	}
-
+	
     let mut parser = parser_builder.build();
 
 	let ast = match parser.parse(lexer.lex(&input)) {

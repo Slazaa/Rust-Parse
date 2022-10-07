@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use crate::ASTNode;
 
-pub type PatternFunc<N> = fn(&[N]) -> N;
+pub type PatternFunc<N> = fn(&[N]) -> Result<N, String>;
 
 #[derive(Clone)]
 pub struct Pattern<N>

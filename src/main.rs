@@ -38,32 +38,33 @@ fn expr_num(nodes: &[Node]) -> Result<Node, String> {
 
 fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 	let left = match &nodes[0] {
-		Node::Expr(x) => x,
-		_ => return Err("Invalid node".to_owned())
+		Node::Token(x) if x.name() == "NUM" => x,
+		_ => return Err(format!("Invalid node '{:?}'", nodes[0]))
 	};
 
 	let op = match &nodes[1] {
 		Node::Token(x) => x,
-		_ => return Err("Invalid node".to_owned())
+		_ => return Err(format!("Invalid node '{:?}'", nodes[1]))
 	};
 
 	let right = match &nodes[2] {
 		Node::Expr(x) => x,
-		_ => return Err("Invalid node".to_owned())
+		_ => return Err(format!("Invalid node '{:?}'", nodes[2]))
 	};
 
 	let value = match op.name().as_str() {
-		"PLUS" => left.value + right.value,
-		_ => return Err("Invalid operator".to_owned())
+		"MINUS" => left.symbol().parse::<f64>().unwrap() - right.value,
+		"PLUS" => left.symbol().parse::<f64>().unwrap() + right.value,
+		_ => return Err(format!("Invalid operator '{}'", op.name()))
 	};
 
 	Ok(Node::Expr(Expr { value }))
 }
 
 fn program(nodes: &[Node]) -> Result<Node, String> {
-    if nodes.is_empty() {
-        return Ok(Node::Program(None));
-    }
+	if nodes.is_empty() {
+		return Ok(Node::Program(None));
+	}
 
 	match nodes[0] {
 		Node::Expr(expr) =>Ok(Node::Program(Some(expr))),
@@ -97,9 +98,10 @@ fn main() {
 	
 	if let Err(e) = lexer_builder.add_rules(&[
 		("ID", r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
+		("MINUS", r"(^\-)"),
 		("NL", r"(^[\r\n]+)"),
 		("NUM", r"(^\d+(\.\d+)?)"),
-		("PLUS", r"(^+)")
+		("PLUS", r"(^\+)")
 	]) {
 		println!("{}", e);
 		return;
@@ -107,23 +109,24 @@ fn main() {
 
 	let lexer = lexer_builder.build();
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
-	
+
 	if let Err(e) = parser_builder.add_patterns(&[
+		("expr", "NUM PLUS expr", expr_op),
+		("expr", "NUM MINUS expr", expr_op),
 		("expr", "NUM", expr_num),
-		("expr", "expr PLUS expr", expr_op),
 		("program", "expr", program),
 		("program", "", program)
 	]) {
 		println!("{}", e);
 		return;
 	}
-	
-    let mut parser = parser_builder.build();
+
+	let mut parser = parser_builder.build();
 
 	let ast = match parser.parse(lexer.lex(&input)) {
 		Ok(x) => x,
 		Err((e, pos)) => {
-			println!("{} at {}", e, pos);
+			println!("{:?} at {}", e, pos);
 			return;
 		}
 	};

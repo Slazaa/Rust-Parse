@@ -2,6 +2,10 @@ use regex::Match;
 
 use crate::{Rule, Token, Position};
 
+pub enum LexerError {
+	Invalid
+}
+
 #[derive(Clone)]
 pub struct Lexer {
 	rules: Vec<Rule>,
@@ -58,7 +62,7 @@ impl LexerStream {
 }
 
 impl Iterator for LexerStream {
-	type Item = Result<Token, (String, Position)>;
+	type Item = Result<Token, (LexerError, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.start_pos = self.pos;
@@ -91,6 +95,6 @@ impl Iterator for LexerStream {
 			}
 		}
 
-		Some(Err(("Invalid syntax".to_owned(), self.pos)))
+		Some(Err((LexerError::Invalid, self.pos)))
 	}
 }

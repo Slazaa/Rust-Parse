@@ -106,8 +106,8 @@ where
 		for pattern in &patterns {
 			match self.eval_pattern(lexer_stream, nodes, pattern) {
 				Ok(node) => {
-					*nodes = Vec::new();
-					nodes.push((pattern.name().to_owned(), node));
+					*nodes = nodes[pattern.elems().len()..].to_vec();
+					nodes.insert(0, (pattern.name().to_owned(), node));
 					found_pattern = true;
 					break;
 				}
@@ -128,9 +128,10 @@ where
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
-		let res = self.eval_pattern_by_name(&mut lexer_stream, "program", &mut Vec::new());
+		let mut nodes = Vec::new();
+		let res = self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes);
 
-		if lexer_stream.next().is_some() {
+		if nodes.len() > 1 {
 			return Err((ParserError::TokenRemaining, self.pos));
 		}
 

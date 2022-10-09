@@ -5,6 +5,7 @@ use crate::{LexerStream, Pattern, ASTNode, Position};
 #[derive(Debug)]
 pub enum ParserError {
 	InvalidPatternName,
+	InvalidToken,
 	NotMatching,
 	TokenRemaining,
 	UnknownElem(String),
@@ -48,7 +49,7 @@ where
 					Some(node) => {
 						match node {
 							Ok(x) => x,
-							Err((_, pos)) => return Err((ParserError::NotMatching, pos))
+							Err(e) => return Err(e)
 						}
 					}
 					None => return Err((ParserError::NotMatching, self.pos))
@@ -129,12 +130,15 @@ where
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
 		let mut nodes = Vec::new();
-		let res = self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes);
+		let res = match self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes) {
+			Ok(x) => x,
+			Err(e) => return Err(e)
+		};
 
 		if nodes.len() > 1 {
 			return Err((ParserError::TokenRemaining, self.pos));
 		}
 
-		res
+		Ok(res)
 	}
 }

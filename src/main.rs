@@ -55,6 +55,8 @@ fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 	let value = match op.name().as_str() {
 		"MINUS" => left.symbol().parse::<f64>().unwrap() - right.value,
 		"PLUS" => left.symbol().parse::<f64>().unwrap() + right.value,
+		"MULT" => left.symbol().parse::<f64>().unwrap() * right.value,
+		"DIV" => left.symbol().parse::<f64>().unwrap() / right.value,
 		_ => return Err(format!("Invalid operator '{}'", op.name()))
 	};
 
@@ -97,11 +99,13 @@ fn main() {
 	lexer_builder.ignore_rule(r"(^[ \t]+)").unwrap();
 	
 	if let Err(e) = lexer_builder.add_rules(&[
+		("DIV", r"(^[/])"),
 		("ID", r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
-		("MINUS", r"(^\-)"),
+		("MINUS", r"(^[-])"),
+		("MULT", r"(^[*])"),
 		("NL", r"(^[\r\n]+)"),
 		("NUM", r"(^\d+(\.\d+)?)"),
-		("PLUS", r"(^\+)")
+		("PLUS", r"(^[+])")
 	]) {
 		println!("{}", e);
 		return;
@@ -113,6 +117,8 @@ fn main() {
 	if let Err(e) = parser_builder.add_patterns(&[
 		("expr", "NUM PLUS expr", expr_op),
 		("expr", "NUM MINUS expr", expr_op),
+		("expr", "NUM MULT expr", expr_op),
+		("expr", "NUM DIV expr", expr_op),
 		("expr", "NUM", expr_num),
 		("program", "expr", program),
 		("program", "", program)

@@ -1,10 +1,6 @@
 use regex::Match;
 
-use crate::{Rule, Token, Position};
-
-pub enum LexerError {
-	Invalid
-}
+use crate::{Rule, Token, Position, ParserError};
 
 #[derive(Clone)]
 pub struct Lexer {
@@ -62,7 +58,7 @@ impl LexerStream {
 }
 
 impl Iterator for LexerStream {
-	type Item = Result<Token, (LexerError, Position)>;
+	type Item = Result<Token, (ParserError, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.start_pos = self.pos;
@@ -95,6 +91,6 @@ impl Iterator for LexerStream {
 			}
 		}
 
-		Some(Err((LexerError::Invalid, self.pos)))
+		Some(Err((ParserError::InvalidToken, self.pos)))
 	}
 }

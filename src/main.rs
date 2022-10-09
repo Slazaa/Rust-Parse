@@ -217,7 +217,7 @@ fn main() {
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
-
+/*
 	for token in lexer.lex(&input) {
 		match token {
 			Ok(token) => println!("{:#?}", token),
@@ -227,7 +227,7 @@ fn main() {
 			}
 		}
 	}
-
+*/
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
 	parser_builder.add_patterns(&[
@@ -237,9 +237,9 @@ fn main() {
 		("expr", "NUM DIV expr", expr_op),
 		("expr", "NUM", expr_num),
 		("func", "FUNC opt_nl LCBR opt_nl stmts opt_nl RCBR", func),
-		//("func_proto", "FUNC", func_proto),
+		("func_proto", "FUNC", func_proto),
 		("item", "func", item),
-		//("item", "func_proto", item),
+		("item", "func_proto", item),
 		("label", "ID COL item", label),
 		("opt_nl", "NL", opt_new_line),
 		("opt_nl", "", opt_new_line),

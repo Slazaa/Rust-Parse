@@ -102,7 +102,7 @@ fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 }
 
 fn func(nodes: &[Node]) -> Result<Node, String> {
-	let stmts = match &nodes[3] {
+	let stmts = match &nodes[4] {
 		Node::Stmts(x) => x.to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[4]))
 	};
@@ -217,7 +217,7 @@ fn main() {
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
-/*
+
 	for token in lexer.lex(&input) {
 		match token {
 			Ok(token) => println!("{:#?}", token),
@@ -227,7 +227,7 @@ fn main() {
 			}
 		}
 	}
-*/
+
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
 	parser_builder.add_patterns(&[
@@ -236,7 +236,7 @@ fn main() {
 		("expr", "NUM MULT expr", expr_op),
 		("expr", "NUM DIV expr", expr_op),
 		("expr", "NUM", expr_num),
-		("func", "FUNC opt_nl LCBR stmts RCBR", func),
+		("func", "FUNC opt_nl LCBR opt_nl stmts opt_nl RCBR", func),
 		//("func_proto", "FUNC", func_proto),
 		("item", "func", item),
 		//("item", "func_proto", item),

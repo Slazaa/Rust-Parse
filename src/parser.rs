@@ -27,7 +27,7 @@ where
 {
 	pub fn new(token_names: &[String], patterns: &[Pattern<N>]) -> Self {
 		let mut patterns = patterns.to_vec();
-        patterns.dedup();
+		patterns.dedup();
 
 		Self {
 			token_names: token_names.to_owned(),
@@ -62,22 +62,21 @@ where
 
 			// Check if the pattern element is a pattern
 			// If it is, evaluate the pattern
-            if !self.token_names.contains(elem) {
-                let mut eval_nodes = nodes[idx..].to_vec();
-				nodes.drain(idx..);
+			if !self.token_names.contains(elem) {
+				let mut eval_nodes = nodes[idx..].to_vec();
+				let mut node_used_count = 0;
 
-                let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes) {
-                    Ok(x) => x,
-                    Err(e) => {
-                        nodes.append(&mut eval_nodes);
-                        return Err(e);
-                    }
-                };
+				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
+					Ok(x) => x,
+					Err(e) => return Err(e)
+				};
 
 				// Replace the last nodes with the new evaluated node
-                nodes.push((elem.to_owned(), res_node));
-                continue;
-            }
+				nodes.drain(idx..idx+node_used_count);
+				nodes.insert(idx, (elem.to_owned(), res_node));
+
+				continue;
+			}
 
 			// Else, that means it's a token
 			// Check if the pattern element is different from the node tag
@@ -93,22 +92,27 @@ where
 		}
 	}
 
-	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, nodes: &mut Vec<(String, N)>) -> Result<N, (ParserError, Position)> {
+	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, nodes: &mut Vec<(String, N)>, node_used_count: Option<&mut usize>) -> Result<N, (ParserError, Position)> {
 		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		// Check if a pattern matches this name
 		// If not, return an error
-        if patterns.is_empty() {
-            return Err((ParserError::InvalidPatternName, self.pos));
-        }
+		if patterns.is_empty() {
+			return Err((ParserError::InvalidPatternName, self.pos));
+		}
 
-        let mut found_pattern = false;
+		let mut found_pattern = false;
 
 		for pattern in &patterns {
 			match self.eval_pattern(lexer_stream, nodes, pattern) {
 				Ok(node) => {
 					*nodes = nodes[pattern.elems().len()..].to_vec();
 					nodes.insert(0, (pattern.name().to_owned(), node));
+					
+					if let Some(node_used_count) = node_used_count {
+						*node_used_count = pattern.elems().len();
+					}
+
 					found_pattern = true;
 					break;
 				}
@@ -121,16 +125,16 @@ where
 			}
 		}
 
-        if !found_pattern {
-            return Err((ParserError::NotMatching, self.pos));
-        }
+		if !found_pattern {
+			return Err((ParserError::NotMatching, self.pos));
+		}
 
-        Ok(nodes.first().unwrap().1.clone())
+		Ok(nodes.first().unwrap().1.clone())
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
 		let mut nodes = Vec::new();
-		let res = match self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes) {
+		let res = match self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes, None) {
 			Ok(x) => x,
 			Err(e) => return Err(e)
 		};

@@ -1,18 +1,56 @@
 use std::{env, fs};
 
-use parse::{Token, ASTNode};
+use parse::*;
 
-#[derive(Debug, Copy, Clone)]
-struct Expr {
+#[derive(Debug, Clone)]
+pub enum Item {
+	Func(Func),
+	FuncProto(FuncProto)
+}
+
+#[derive(Debug, Clone)]
+pub struct Label {
+	pub id: String,
+	pub item: Item
+}
+
+#[derive(Debug, Clone)]
+pub struct Func {
+	pub stmts: Stmts
+}
+
+#[derive(Debug, Clone)]
+pub struct FuncProto;
+
+#[derive(Debug, Clone)]
+pub enum Stmt {
+	Label(Label)
+}
+
+#[derive(Debug, Clone)]
+pub struct Stmts {
+	pub stmts: Vec<Stmt>
+}
+
+#[derive(Debug, Clone)]
+pub struct Expr {
 	pub value: f64
 }
 
 #[derive(Debug, Clone)]
-enum Node {
+pub enum Node {
 	Token(Token),
 	// ----------
+	NewLine,
+	OptNewLine(bool),
+	Item(Item),
+	Label(Label),
+	Func(Func),
+	FuncProto(FuncProto),
+	Stmt(Stmt),
+	Stmts(Stmts),
 	Expr(Expr),
-	Program(Option<Expr>)
+	Program(Option<Stmts>)
 }
 
 impl ASTNode for Node {
@@ -39,17 +77,17 @@ fn expr_num(nodes: &[Node]) -> Result<Node, String> {
 fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 	let left = match &nodes[0] {
 		Node::Token(x) if x.name() == "NUM" => x,
-		_ => return Err(format!("Invalid node '{:?}'", nodes[0]))
+		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[0]))
 	};
 
 	let op = match &nodes[1] {
 		Node::Token(x) => x,
-		_ => return Err(format!("Invalid node '{:?}'", nodes[1]))
+		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[1]))
 	};
 
 	let right = match &nodes[2] {
 		Node::Expr(x) => x,
-		_ => return Err(format!("Invalid node '{:?}'", nodes[2]))
+		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[2]))
 	};
 
 	let value = match op.name().as_str() {
@@ -57,10 +95,56 @@ fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 		"PLUS" => left.symbol().parse::<f64>().unwrap() + right.value,
 		"MULT" => left.symbol().parse::<f64>().unwrap() * right.value,
 		"DIV" => left.symbol().parse::<f64>().unwrap() / right.value,
-		_ => return Err(format!("Invalid operator '{}'", op.name()))
+		_ => return Err(format!("Invalid operator '{}' in expr_op", op.name()))
 	};
 
 	Ok(Node::Expr(Expr { value }))
+}
+
+fn func(nodes: &[Node]) -> Result<Node, String> {
+	let stmts = match &nodes[3] {
+		Node::Stmts(x) => x.to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[4]))
+	};
+
+	Ok(Node::Func(Func { stmts }))
+}
+
+fn func_proto(_nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::FuncProto(FuncProto))
+}
+
+fn item(nodes: &[Node]) -> Result<Node, String> {
+	match &nodes[0] {
+		Node::Func(x) => Ok(Node::Item(Item::Func(x.to_owned()))),
+		Node::FuncProto(x) => Ok(Node::Item(Item::FuncProto(x.to_owned()))),
+		_ => Err(format!("Invalid node '{:?}' in 'item'", nodes[0]))
+	}
+}
+
+fn label(nodes: &[Node]) -> Result<Node, String> {
+	let id = match &nodes[0] {
+		Node::Token(x) if x.name() == "ID" => x.symbol().to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[0]))
+	};
+
+	let item = match &nodes[2] {
+		Node::Item(x) => x.to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[2]))
+	};
+
+	Ok(Node::Label(Label { id, item }))
+}
+
+fn opt_new_line(nodes: &[Node]) -> Result<Node, String> {
+	if nodes.is_empty() {
+		return Ok(Node::OptNewLine(false))
+	}
+
+	match &nodes[0] {
+		Node::Token(x) if x.name() == "NL" => Ok(Node::OptNewLine(true)),
+		_ => Err(format!("Invalid node '{:?}' in 'opt_new_line'", nodes[0]))
+	}
 }
 
 fn program(nodes: &[Node]) -> Result<Node, String> {
@@ -68,9 +152,27 @@ fn program(nodes: &[Node]) -> Result<Node, String> {
 		return Ok(Node::Program(None));
 	}
 
-	match nodes[0] {
-		Node::Expr(expr) =>Ok(Node::Program(Some(expr))),
-		_ => Err("Invalid node!".to_owned())
+	match &nodes[0] {
+		Node::Stmts(x) => Ok(Node::Program(Some(x.to_owned()))),
+		_ => Err(format!("Invalid node '{:?}' in 'program'", nodes[0]))
+	}
+}
+
+fn stmt(nodes: &[Node]) -> Result<Node, String> {
+	match &nodes[0] {
+		Node::Label(x) => Ok(Node::Stmt(Stmt::Label(x.to_owned()))),
+		_ => Err(format!("Invalid node '{:?}' in 'stmt'", nodes[0]))
+	}
+}
+
+fn stmts(nodes: &[Node]) -> Result<Node, String> {
+	if nodes.is_empty() {
+		return Ok(Node::Stmts(Stmts { stmts: vec![] }));
+	}
+
+	match &nodes[0] {
+		Node::Stmt(x) => Ok(Node::Stmts(Stmts { stmts: vec![x.to_owned()] })),
+		_ => Err(format!("Invalid node '{:?}' in 'stmts'", nodes[0]))
 	}
 }
 
@@ -95,37 +197,58 @@ fn main() {
 		}
 	};
 
-	let mut lexer_builder = parse::LexerBuilder::new();
+	let mut lexer_builder = LexerBuilder::new();
+
 	lexer_builder.ignore_rule(r"(^[ \t]+)").unwrap();
-	
-	if let Err(e) = lexer_builder.add_rules(&[
+	lexer_builder.add_rules(&[
+		("COL", r"(^[:])"),
 		("DIV", r"(^[/])"),
+		("FUNC", r"(^func)"),
 		("ID", r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
+		("LCBR", r"(^[{])"),
+		("LPAR", r"(^[(])"),
 		("MINUS", r"(^[-])"),
 		("MULT", r"(^[*])"),
 		("NL", r"(^[\r\n]+)"),
 		("NUM", r"(^\d+(\.\d+)?)"),
-		("PLUS", r"(^[+])")
-	]) {
-		println!("{}", e);
-		return;
-	}
+		("PLUS", r"(^[+])"),
+		("RCBR", r"(^[}])"),
+		("RPAR", r"(^[)])")
+	]).unwrap();
 
 	let lexer = lexer_builder.build();
+/*
+	for token in lexer.lex(&input) {
+		match token {
+			Ok(token) => println!("{:#?}", token),
+			Err(e) => {
+				println!("{:?}", e);
+				break;
+			}
+		}
+	}
+*/
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
-	if let Err(e) = parser_builder.add_patterns(&[
+	parser_builder.add_patterns(&[
 		("expr", "NUM PLUS expr", expr_op),
 		("expr", "NUM MINUS expr", expr_op),
 		("expr", "NUM MULT expr", expr_op),
 		("expr", "NUM DIV expr", expr_op),
 		("expr", "NUM", expr_num),
-		("program", "expr", program),
-		("program", "", program)
-	]) {
-		println!("{}", e);
-		return;
-	}
+		("func", "FUNC opt_nl LCBR stmts RCBR", func),
+		//("func_proto", "FUNC", func_proto),
+		("item", "func", item),
+		//("item", "func_proto", item),
+		("label", "ID COL item", label),
+		("opt_nl", "NL", opt_new_line),
+		("opt_nl", "", opt_new_line),
+		("program", "stmts", program),
+		("program", "", program),
+		("stmt", "label", stmt),
+		("stmts", "stmt", stmts),
+		("stmts", "", stmts),
+	]).unwrap();
 
 	let mut parser = parser_builder.build();
 

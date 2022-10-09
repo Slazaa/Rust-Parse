@@ -42,9 +42,48 @@ where
 			if !self.token_names.contains(elem) && !self.patterns.iter().map(|x| x.name()).collect::<Vec<&String>>().contains(&elem) {
 				return Err((ParserError::UnknownElem(elem.to_owned()), self.pos));
 			}
+			
+			// Check if the pattern element is a pattern
+			// If it is, evaluate the pattern
+			if !self.token_names.contains(elem) {
+				let mut was_eval_nodes = false;
+				let mut eval_nodes = if nodes.len() > idx {
+					was_eval_nodes = true;
+					nodes[idx..].to_vec()
+				} else {
+					vec![]
+				};
 
-			// Get new tokens, if the pattern is longer than the current number of token
-			while nodes.len() < pattern.elems().len() {
+				let mut node_used_count = 0;
+
+				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
+					Ok(x) => x,
+					Err(e) => {
+						if eval_nodes.len() >= node_used_count {
+							nodes.append(&mut eval_nodes[node_used_count..].to_owned());
+						}
+
+						return Err(e)
+					}
+				};
+
+				// Replace the last nodes with the new evaluated node
+				if was_eval_nodes {
+					nodes.drain(idx..idx+node_used_count);
+					nodes.insert(idx, (elem.to_owned(), res_node));
+				} else {
+					nodes.push((elem.to_owned(), res_node));
+				}
+
+				if eval_nodes.len() >= node_used_count {
+					nodes.append(&mut eval_nodes[node_used_count..].to_owned());
+				}
+
+				continue;
+			}
+
+			// Get new token, if the pattern is longer than the current number of token
+			if nodes.len() <= idx {
 				let token = match lexer_stream.next() {
 					Some(node) => {
 						match node {
@@ -54,34 +93,16 @@ where
 					}
 					None => return Err((ParserError::NotMatching, self.pos))
 				};
-	
+
 				nodes.push((token.name().to_owned(), N::new_token(&token)));
 			}
 
 			let (tag, _node) = &nodes[idx];
 
-			// Check if the pattern element is a pattern
-			// If it is, evaluate the pattern
-			if !self.token_names.contains(elem) {
-				let mut eval_nodes = nodes[idx..].to_vec();
-				let mut node_used_count = 0;
-
-				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
-					Ok(x) => x,
-					Err(e) => return Err(e)
-				};
-
-				// Replace the last nodes with the new evaluated node
-				nodes.drain(idx..idx+node_used_count);
-				nodes.insert(idx, (elem.to_owned(), res_node));
-
-				continue;
-			}
-
 			// Else, that means it's a token
 			// Check if the pattern element is different from the node tag
 			// If it is, that means the nodes don't match the pattern
-			else if elem != tag {
+			if elem != tag {
 				return Err((ParserError::NotMatching, self.pos));
 			}
 		}
@@ -102,12 +123,13 @@ where
 		}
 
 		let mut found_pattern = false;
+		let mut res_node = None;
 
 		for pattern in &patterns {
 			match self.eval_pattern(lexer_stream, nodes, pattern) {
 				Ok(node) => {
 					*nodes = nodes[pattern.elems().len()..].to_vec();
-					nodes.insert(0, (pattern.name().to_owned(), node));
+					res_node = Some(node);
 					
 					if let Some(node_used_count) = node_used_count {
 						*node_used_count = pattern.elems().len();
@@ -129,7 +151,10 @@ where
 			return Err((ParserError::NotMatching, self.pos));
 		}
 
-		Ok(nodes.first().unwrap().1.clone())
+		match res_node {
+			Some(x) => Ok(x),
+			None => panic!()
+		}
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
@@ -140,6 +165,7 @@ where
 		};
 
 		if nodes.len() > 1 {
+			println!("{:#?}", nodes);
 			return Err((ParserError::TokenRemaining, self.pos));
 		}
 

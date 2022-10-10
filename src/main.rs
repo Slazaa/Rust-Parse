@@ -24,6 +24,7 @@ pub struct FuncProto;
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+	Expr(Expr),
 	Label(Label)
 }
 
@@ -160,6 +161,7 @@ fn program(nodes: &[Node]) -> Result<Node, String> {
 
 fn stmt(nodes: &[Node]) -> Result<Node, String> {
 	match &nodes[0] {
+		Node::Expr(x) => Ok(Node::Stmt(Stmt::Expr(x.to_owned()))),
 		Node::Label(x) => Ok(Node::Stmt(Stmt::Label(x.to_owned()))),
 		_ => Err(format!("Invalid node '{:?}' in 'stmt'", nodes[0]))
 	}
@@ -201,19 +203,19 @@ fn main() {
 
 	lexer_builder.ignore_rule(r"(^[ \t]+)").unwrap();
 	lexer_builder.add_rules(&[
-		("COL", r"(^[:])"),
-		("DIV", r"(^[/])"),
-		("FUNC", r"(^func)"),
-		("ID", r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
-		("LCBR", r"(^[{])"),
-		("LPAR", r"(^[(])"),
+		("COL",   r"(^[:])"),
+		("DIV",   r"(^[/])"),
+		("FUNC",  r"(^func)"),
+		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
+		("LCBR",  r"(^[{])"),
+		("LPAR",  r"(^[(])"),
 		("MINUS", r"(^[-])"),
-		("MULT", r"(^[*])"),
-		("NL", r"(^[\r\n]+)"),
-		("NUM", r"(^\d+(\.\d+)?)"),
-		("PLUS", r"(^[+])"),
-		("RCBR", r"(^[}])"),
-		("RPAR", r"(^[)])")
+		("MULT",  r"(^[*])"),
+		("NL",    r"(^[\r\n]+)"),
+		("NUM",   r"(^\d+(\.\d+)?)"),
+		("PLUS",  r"(^[+])"),
+		("RCBR",  r"(^[}])"),
+		("RPAR",  r"(^[)])")
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
@@ -231,23 +233,24 @@ fn main() {
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
 	parser_builder.add_patterns(&[
-		("expr", "NUM PLUS expr", expr_op),
-		("expr", "NUM MINUS expr", expr_op),
-		("expr", "NUM MULT expr", expr_op),
-		("expr", "NUM DIV expr", expr_op),
-		("expr", "NUM", expr_num),
-		("func", "FUNC opt_nl LCBR opt_nl stmts opt_nl RCBR", func),
+		("expr",       "NUM PLUS expr", expr_op),
+		("expr",       "NUM MINUS expr", expr_op),
+		("expr",       "NUM MULT expr", expr_op),
+		("expr",       "NUM DIV expr", expr_op),
+		("expr",       "NUM", expr_num),
+		("func",       "FUNC opt_nl LCBR opt_nl stmts opt_nl RCBR", func),
 		("func_proto", "FUNC", func_proto),
-		("item", "func", item),
-		("item", "func_proto", item),
-		("label", "ID COL item", label),
-		("opt_nl", "NL", opt_new_line),
-		("opt_nl", "", opt_new_line),
-		("program", "stmts", program),
-		("program", "", program),
-		("stmt", "label", stmt),
-		("stmts", "stmt", stmts),
-		("stmts", "", stmts),
+		("item",       "func", item),
+		("item",       "func_proto", item),
+		("label",      "ID COL item", label),
+		("opt_nl",     "NL", opt_new_line),
+		("opt_nl",     "", opt_new_line),
+		("program",    "stmts", program),
+		("program",    "", program),
+		("stmt",       "expr", stmt),
+		("stmt",       "label", stmt),
+		("stmts",      "stmt", stmts),
+		("stmts",      "", stmts),
 	]).unwrap();
 
 	let mut parser = parser_builder.build();

@@ -46,9 +46,9 @@ where
 			// Check if the pattern element is a pattern
 			// If it is, evaluate the pattern
 			if !self.token_names.contains(elem) {
-				let mut was_eval_nodes = false;
+				let mut is_eval_nodes = false;
 				let mut eval_nodes = if nodes.len() > idx {
-					was_eval_nodes = true;
+					is_eval_nodes = true;
 					nodes[idx..].to_vec()
 				} else {
 					vec![]
@@ -68,8 +68,16 @@ where
 				};
 
 				// Replace the last nodes with the new evaluated node
-				if was_eval_nodes {
-					nodes.drain(idx..idx+node_used_count);
+				if is_eval_nodes {
+					let range_end;
+
+					if idx + node_used_count >= nodes.len() {
+						range_end = nodes.len() - 1;
+					} else {
+						range_end = idx + node_used_count;
+					}
+
+					nodes.drain(idx..range_end);
 					nodes.insert(idx, (elem.to_owned(), res_node));
 				} else {
 					nodes.push((elem.to_owned(), res_node));

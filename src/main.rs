@@ -172,10 +172,18 @@ fn stmts(nodes: &[Node]) -> Result<Node, String> {
 		return Ok(Node::Stmts(Stmts { stmts: vec![] }));
 	}
 
-	match &nodes[0] {
-		Node::Stmt(x) => Ok(Node::Stmts(Stmts { stmts: vec![x.to_owned()] })),
-		_ => Err(format!("Invalid node '{:?}' in 'stmts'", nodes[0]))
+	let node_stmt = match &nodes[0] {
+		Node::Stmt(x) => x.to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'stmts'", nodes[0]))
+	};
+/*
+	if let Some(Node::Stmts(node_stmts)) = nodes.get(1) {
+	    let mut stmt_vec = vec![node_stmt];
+	    stmt_vec.extend(node_stmts.stmts.clone());
+        return Ok(Node::Stmts(Stmts { stmts: stmt_vec }))
 	}
+*/
+	Ok(Node::Stmts(Stmts { stmts: vec![node_stmt] }))
 }
 
 fn main() {
@@ -249,6 +257,7 @@ fn main() {
 		("program",    "", program),
 		("stmt",       "expr", stmt),
 		("stmt",       "label", stmt),
+		("stmts",      "stmt stmts", stmts),
 		("stmts",      "stmt", stmts),
 		("stmts",      "", stmts),
 	]).unwrap();

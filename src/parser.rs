@@ -56,6 +56,8 @@ where
 
 				let mut node_used_count = 0;
 
+				println!("BEF {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
+
 				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
 					Ok(x) => x,
 					Err(e) => {
@@ -72,7 +74,7 @@ where
 					let range_end;
 
 					if idx + node_used_count >= nodes.len() {
-						range_end = nodes.len() - 1;
+						range_end = nodes.len();
 					} else {
 						range_end = idx + node_used_count;
 					}
@@ -86,6 +88,8 @@ where
 				if eval_nodes.len() >= node_used_count {
 					nodes.append(&mut eval_nodes[node_used_count..].to_owned());
 				}
+
+				println!("AFT {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 
 				continue;
 			}

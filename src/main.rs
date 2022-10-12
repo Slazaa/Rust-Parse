@@ -255,7 +255,7 @@ fn main() {
 		("opt_nl",     "", opt_new_line),
 		("program",    "stmts", program),
 		("program",    "", program),
-		//("stmt",       "expr", stmt),
+		("stmt",       "expr", stmt),
 		("stmt",       "label", stmt),
 		("stmts",      "stmt stmts", stmts),
 		("stmts",      "stmt", stmts),

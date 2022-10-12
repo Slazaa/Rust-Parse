@@ -56,15 +56,10 @@ where
 
 				let mut node_used_count = 0;
 
-				println!("BEF {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
-
 				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
 					Ok(x) => x,
 					Err(e) => {
-						if eval_nodes.len() >= node_used_count {
-							nodes.append(&mut eval_nodes[node_used_count..].to_owned());
-						}
-
+						nodes.append(&mut eval_nodes[nodes.len()-idx..].to_owned());
 						return Err(e)
 					}
 				};
@@ -88,8 +83,6 @@ where
 				if eval_nodes.len() >= node_used_count {
 					nodes.append(&mut eval_nodes[node_used_count..].to_owned());
 				}
-
-				println!("AFT {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 
 				continue;
 			}
@@ -134,21 +127,17 @@ where
 			return Err((ParserError::InvalidPatternName, self.pos));
 		}
 
-		let mut found_pattern = false;
-		let mut res_node = None;
-
 		for pattern in &patterns {
 			match self.eval_pattern(lexer_stream, nodes, pattern) {
 				Ok(node) => {
+					// Keep the nodes that were not used during the evaluation
 					*nodes = nodes[pattern.elems().len()..].to_vec();
-					res_node = Some(node);
-					
+
 					if let Some(node_used_count) = node_used_count {
 						*node_used_count = pattern.elems().len();
 					}
 
-					found_pattern = true;
-					break;
+					return Ok(node);
 				}
 				Err(e) => {
 					match e.0 {
@@ -159,14 +148,7 @@ where
 			}
 		}
 
-		if !found_pattern {
-			return Err((ParserError::NotMatching, self.pos));
-		}
-
-		match res_node {
-			Some(x) => Ok(x),
-			None => panic!()
-		}
+		Err((ParserError::NotMatching, self.pos))
 	}
 	
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
@@ -176,8 +158,21 @@ where
 			Err(e) => return Err(e)
 		};
 
-		if nodes.len() > 1 {
-			println!("{:#?}", nodes);
+		if !nodes.is_empty() {
+			for node in nodes.iter().map(|(_, x)| x) {
+				println!("{:#?}", node);
+			}
+
+			for token in lexer_stream {
+				match token {
+					Ok(token) => println!("{:#?}", N::new_token(&token)),
+					Err(e) => {
+						println!("{:?}", e);
+						break;
+					}
+				}
+			}
+
 			return Err((ParserError::TokenRemaining, self.pos));
 		}
 

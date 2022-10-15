@@ -250,7 +250,7 @@ fn main() {
 		("func_proto", "FUNC", func_proto),
 		("item",       "func", item),
 		("item",       "func_proto", item),
-		("label",      "ID COL item", label),
+		("label",      "opt_nl ID COL item opt_nl", label),
 		("opt_nl",     "NL", opt_new_line),
 		("opt_nl",     "", opt_new_line),
 		("program",    "stmts", program),

@@ -39,7 +39,7 @@ where
 	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, nodes: &mut Vec<(String, N)>, pattern: &Pattern<N>) -> Result<N, (ParserError, Position)> {
 		for (idx, elem) in pattern.elems().iter().enumerate() {
 			// Check if the pattern element is valid
-			if !self.token_names.contains(elem) && !self.patterns.iter().map(|x| x.name()).collect::<Vec<&String>>().contains(&elem) {
+			if !self.token_names.contains(elem) && !self.patterns.iter().any(|x| x.name() == elem) {
 				return Err((ParserError::UnknownElem(elem.to_owned()), self.pos));
 			}
 			
@@ -56,6 +56,8 @@ where
 
 				let mut node_used_count = 0;
 
+				println!("BEF {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
+
 				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
 					Ok(x) => x,
 					Err(e) => {
@@ -66,19 +68,19 @@ where
 
 				// Replace the last nodes with the new evaluated node
 				if is_eval_nodes {
-					let range_end;
-
-					if idx + node_used_count >= nodes.len() {
-						range_end = nodes.len();
+					let range_end = if idx + node_used_count >= nodes.len() {
+						nodes.len()
 					} else {
-						range_end = idx + node_used_count;
-					}
+						idx + node_used_count
+					};
 
 					nodes.drain(idx..range_end);
 					nodes.insert(idx, (elem.to_owned(), res_node));
 				} else {
 					nodes.push((elem.to_owned(), res_node));
 				}
+
+				println!("AFT {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 
 				if eval_nodes.len() >= node_used_count {
 					nodes.append(&mut eval_nodes[node_used_count..].to_owned());
@@ -158,21 +160,24 @@ where
 			Err(e) => return Err(e)
 		};
 
-		if !nodes.is_empty() {
-			for node in nodes.iter().map(|(_, x)| x) {
-				println!("{:#?}", node);
-			}
+		let mut remain_nodes = Vec::new();
 
-			for token in lexer_stream {
-				match token {
-					Ok(token) => println!("{:#?}", N::new_token(&token)),
-					Err(e) => {
-						println!("{:?}", e);
-						break;
-					}
+		for node in nodes.iter().map(|(_, x)| x) {
+			remain_nodes.push(node.clone());
+		}
+
+		for token in lexer_stream {
+			match token {
+				Ok(token) => remain_nodes.push(N::new_token(&token)),
+				Err(e) => {
+					println!("{:?}", e);
+					return Ok(res);
 				}
 			}
+		}
 
+		if !remain_nodes.is_empty() {
+			println!("{:#?}", remain_nodes);
 			return Err((ParserError::TokenRemaining, self.pos));
 		}
 

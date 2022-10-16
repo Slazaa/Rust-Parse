@@ -43,7 +43,7 @@ pub enum Node {
 	Token(Token),
 	// ----------
 	NewLine,
-	OptNewLine(bool),
+	OptNewLine,
 	Item(Item),
 	Label(Label),
 	Func(Func),
@@ -124,12 +124,12 @@ fn item(nodes: &[Node]) -> Result<Node, String> {
 }
 
 fn label(nodes: &[Node]) -> Result<Node, String> {
-	let id = match &nodes[0] {
+	let id = match &nodes[1] {
 		Node::Token(x) if x.name() == "ID" => x.symbol().to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[0]))
 	};
 
-	let item = match &nodes[2] {
+	let item = match &nodes[3] {
 		Node::Item(x) => x.to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[2]))
 	};
@@ -139,11 +139,11 @@ fn label(nodes: &[Node]) -> Result<Node, String> {
 
 fn opt_new_line(nodes: &[Node]) -> Result<Node, String> {
 	if nodes.is_empty() {
-		return Ok(Node::OptNewLine(false))
+		return Ok(Node::OptNewLine)
 	}
 
 	match &nodes[0] {
-		Node::Token(x) if x.name() == "NL" => Ok(Node::OptNewLine(true)),
+		Node::Token(x) if x.name() == "NL" => Ok(Node::OptNewLine),
 		_ => Err(format!("Invalid node '{:?}' in 'opt_new_line'", nodes[0]))
 	}
 }

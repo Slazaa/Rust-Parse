@@ -37,18 +37,22 @@ where
 	}
 
 	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, nodes: &mut Vec<(String, N)>, pattern: &Pattern<N>) -> Result<N, (ParserError, Position)> {
+		if pattern.elems().is_empty() {
+			println!("{} {:?}", pattern.name(), nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
+		}
+
 		for (idx, elem) in pattern.elems().iter().enumerate() {
 			// Check if the pattern element is valid
 			if !self.token_names.contains(elem) && !self.patterns.iter().any(|x| x.name() == elem) {
 				return Err((ParserError::UnknownElem(elem.to_owned()), self.pos));
 			}
+
+			println!("{} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 			
 			// Check if the pattern element is a pattern
 			// If it is, evaluate the pattern
 			if !self.token_names.contains(elem) {
-				let mut is_eval_nodes = false;
 				let mut eval_nodes = if nodes.len() > idx {
-					is_eval_nodes = true;
 					nodes[idx..].to_vec()
 				} else {
 					vec![]
@@ -58,33 +62,23 @@ where
 
 				println!("BEF {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 
+				if !eval_nodes.is_empty() {
+					nodes.drain(idx..);
+				}
+
 				let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_nodes, Some(&mut node_used_count)) {
 					Ok(x) => x,
 					Err(e) => {
-						nodes.append(&mut eval_nodes[nodes.len()-idx..].to_owned());
+						nodes.append(&mut eval_nodes);
 						return Err(e)
 					}
 				};
 
-				// Replace the last nodes with the new evaluated node
-				if is_eval_nodes {
-					let range_end = if idx + node_used_count >= nodes.len() {
-						nodes.len()
-					} else {
-						idx + node_used_count
-					};
-
-					nodes.drain(idx..range_end);
-					nodes.insert(idx, (elem.to_owned(), res_node));
-				} else {
-					nodes.push((elem.to_owned(), res_node));
-				}
-
 				println!("AFT {} {} {:?}", pattern.name(), elem, nodes.iter().map(|(x, _)| x).collect::<Vec<&String>>());
 
-				if eval_nodes.len() >= node_used_count {
-					nodes.append(&mut eval_nodes[node_used_count..].to_owned());
-				}
+				// Replace the last nodes with the new evaluated node
+				nodes.push((elem.to_owned(), res_node));
+				nodes.append(&mut eval_nodes);
 
 				continue;
 			}

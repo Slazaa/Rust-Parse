@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{LexerStream, Pattern, ASTNode, Position};
+use crate::{LexerStream, Pattern, ASTNode, Position, Token};
 
 #[derive(Debug)]
 pub enum ParserError {
@@ -35,7 +35,7 @@ where
 			pos: Position::new(0, 1, 1)
 		}
 	}
-
+/*
 	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, nodes: &mut Vec<(String, N)>, pattern: &Pattern<N>) -> Result<N, (ParserError, Position)> {
 		for (idx, elem) in pattern.elems().iter().enumerate() {
 			// Check if the pattern element is valid
@@ -124,30 +124,79 @@ where
 			Err(e) => Err((ParserError::PatternFunc(e), self.pos))
 		}
 	}
+*/
+    pub fn is_elem_token(&self, elem: &str) -> bool {
+        self.token_names.contains(&elem.to_owned())
+    }
 
-	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, nodes: &mut Vec<(String, N)>, node_used_count: Option<&mut usize>) -> Result<N, (ParserError, Position)> {
+    pub fn is_elem_node(&self, elem: &str) -> bool {
+        self.patterns.iter().map(|x| x.name()).any(|x| x == &elem.to_owned())
+    }
+
+	pub fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, tokens: &mut Vec<Token>, nodes: &mut Vec<(String, N)>, pattern: &Pattern<N>) -> Result<N, (ParserError, Position)> {
+		for (idx, elem) in pattern.elems().iter().enumerate() {
+            if self.is_elem_token(elem) {
+			    while nodes.len() <= idx {
+				    let token = match lexer_stream.next() {
+					    Some(node) => {
+						    match node {
+							    Ok(x) => x,
+							    Err(e) => return Err(e)
+						    }
+					    }
+					    None => return Err((ParserError::NotMatching, self.pos))
+				    };
+
+				    tokens.push(token.clone());
+				    nodes.push((token.name().to_owned(), N::new_token(&token)));
+				}
+
+				if nodes[idx].0 != *elem {
+				    return Err((ParserError::NotMatching, self.pos));
+				}
+            } else if self.is_elem_node(elem) {
+                let mut eval_tokens = Vec::new();
+                let mut eval_nodes = match nodes.len() > idx {
+                    false => Vec::new(),
+                    true => nodes.drain(idx..).collect::<Vec<(String, N)>>()
+                };
+
+                let res_node = match self.eval_pattern_by_name(lexer_stream, elem, &mut eval_tokens, &mut eval_nodes) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        nodes.append(&mut eval_nodes);
+                        return Err(e);
+                    }
+                };
+
+                nodes.push((elem.to_owned(), res_node));
+                nodes.append(&mut eval_nodes);
+            } else {
+				return Err((ParserError::UnknownElem(elem.to_owned()), self.pos));
+            }
+		}
+
+		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
+			Ok(x) => Ok(x),
+			Err(e) => Err((ParserError::PatternFunc(e), self.pos))
+		}
+	}
+
+	pub fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, tokens: &mut Vec<Token>, nodes: &mut Vec<(String, N)>) -> Result<N, (ParserError, Position)> {
 		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
-		// Check if a pattern matches this name
-		// If not, return an error
 		if patterns.is_empty() {
 			return Err((ParserError::InvalidPatternName, self.pos));
 		}
 
-		let mut found_pattern = false;
 		let mut res_node = None;
 
 		for pattern in &patterns {
-			match self.eval_pattern(lexer_stream, nodes, pattern) {
+			match self.eval_pattern(lexer_stream, tokens, nodes, pattern) {
 				Ok(node) => {
 					*nodes = nodes[pattern.elems().len()..].to_vec();
 					res_node = Some(node);
-					
-					if let Some(node_used_count) = node_used_count {
-						*node_used_count = pattern.elems().len();
-					}
 
-					found_pattern = true;
 					break;
 				}
 				Err(e) => {
@@ -159,19 +208,17 @@ where
 			}
 		}
 
-		if !found_pattern {
-			return Err((ParserError::NotMatching, self.pos));
-		}
-
 		match res_node {
 			Some(x) => Ok(x),
-			None => panic!()
+			None => Err((ParserError::NotMatching, self.pos)) 
 		}
 	}
-	
+
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (ParserError, Position)> {
 		let mut nodes = Vec::new();
-		let res = match self.eval_pattern_by_name(&mut lexer_stream, "program", &mut nodes, None) {
+		let mut tokens = Vec::new();
+
+		let res = match self.eval_pattern_by_name(&mut lexer_stream, "program", &mut tokens, &mut nodes) {
 			Ok(x) => x,
 			Err(e) => return Err(e)
 		};

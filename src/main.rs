@@ -7,25 +7,25 @@ pub enum Item {
 	Func(Func),
 	FuncProto(FuncProto)
 }
-
-#[derive(Debug, Clone)]
-pub struct Label {
-	pub id: String,
-	pub item: Item
-}
-
+/*
 #[derive(Debug, Clone)]
 pub struct Func {
 	pub stmts: Stmts
 }
+*/
+#[derive(Debug, Clone)]
+pub struct Func;
 
 #[derive(Debug, Clone)]
-pub struct FuncProto;
+pub struct FuncProto {
+	pub id: String
+}
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
 	Expr(Expr),
-	Label(Label)
+	Func(Func),
+	FuncProto(FuncProto)
 }
 
 #[derive(Debug, Clone)]
@@ -45,7 +45,6 @@ pub enum Node {
 	NewLine,
 	OptNewLine,
 	Item(Item),
-	Label(Label),
 	Func(Func),
 	FuncProto(FuncProto),
 	Stmt(Stmt),
@@ -101,18 +100,27 @@ fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 
 	Ok(Node::Expr(Expr { value }))
 }
-
+/*
 fn func(nodes: &[Node]) -> Result<Node, String> {
-	let stmts = match &nodes[4] {
+	let stmts = match &nodes[2] {
 		Node::Stmts(x) => x.to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[4]))
 	};
 
 	Ok(Node::Func(Func { stmts }))
 }
+*/
+fn func(_nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::Func(Func))
+}
 
-fn func_proto(_nodes: &[Node]) -> Result<Node, String> {
-	Ok(Node::FuncProto(FuncProto))
+fn func_proto(nodes: &[Node]) -> Result<Node, String> {
+	let id = match &nodes[1] {
+		Node::Token(token) if token.name() == "ID" => token.symbol().to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[1]))
+	};
+
+	Ok(Node::FuncProto(FuncProto { id }))
 }
 
 fn item(nodes: &[Node]) -> Result<Node, String> {
@@ -120,31 +128,6 @@ fn item(nodes: &[Node]) -> Result<Node, String> {
 		Node::Func(x) => Ok(Node::Item(Item::Func(x.to_owned()))),
 		Node::FuncProto(x) => Ok(Node::Item(Item::FuncProto(x.to_owned()))),
 		_ => Err(format!("Invalid node '{:?}' in 'item'", nodes[0]))
-	}
-}
-
-fn label(nodes: &[Node]) -> Result<Node, String> {
-	let id = match &nodes[1] {
-		Node::Token(x) if x.name() == "ID" => x.symbol().to_owned(),
-		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[0]))
-	};
-
-	let item = match &nodes[3] {
-		Node::Item(x) => x.to_owned(),
-		_ => return Err(format!("Invalid node '{:?}' in 'label'", nodes[2]))
-	};
-
-	Ok(Node::Label(Label { id, item }))
-}
-
-fn opt_new_line(nodes: &[Node]) -> Result<Node, String> {
-	if nodes.is_empty() {
-		return Ok(Node::OptNewLine)
-	}
-
-	match &nodes[0] {
-		Node::Token(x) if x.name() == "NL" => Ok(Node::OptNewLine),
-		_ => Err(format!("Invalid node '{:?}' in 'opt_new_line'", nodes[0]))
 	}
 }
 
@@ -160,11 +143,12 @@ fn program(nodes: &[Node]) -> Result<Node, String> {
 }
 
 fn stmt(nodes: &[Node]) -> Result<Node, String> {
-	match &nodes[0] {
-		Node::Expr(x) => Ok(Node::Stmt(Stmt::Expr(x.to_owned()))),
-		Node::Label(x) => Ok(Node::Stmt(Stmt::Label(x.to_owned()))),
-		_ => Err(format!("Invalid node '{:?}' in 'stmt'", nodes[0]))
-	}
+	Ok(Node::Stmt(match nodes[0].to_owned() {
+		Node::Expr(x) => Stmt::Expr(x),
+		Node::Func(x) => Stmt::Func(x),
+		Node::FuncProto(x) => Stmt::FuncProto(x),
+		_ => return Err(format!("Invalid node '{:?}' in 'stmt'", nodes[0]))
+	}))
 }
 
 fn stmts(nodes: &[Node]) -> Result<Node, String> {
@@ -176,14 +160,16 @@ fn stmts(nodes: &[Node]) -> Result<Node, String> {
 		Node::Stmt(x) => x.to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'stmts'", nodes[0]))
 	};
-/*
-	if let Some(Node::Stmts(node_stmts)) = nodes.get(1) {
-	    let mut stmt_vec = vec![node_stmt];
-	    stmt_vec.extend(node_stmts.stmts.clone());
-        return Ok(Node::Stmts(Stmts { stmts: stmt_vec }))
-	}
-*/
-	Ok(Node::Stmts(Stmts { stmts: vec![node_stmt] }))
+
+	let node_stmts = match nodes.get(1) {
+		Some(Node::Stmts(x)) => x.stmts.clone(),
+		_ => Vec::new()
+	};
+
+	let mut stmts_vec = vec![node_stmt];
+	stmts_vec.extend(node_stmts);
+
+	Ok(Node::Stmts(Stmts { stmts: stmts_vec }))
 }
 
 fn main() {
@@ -209,7 +195,11 @@ fn main() {
 
 	let mut lexer_builder = LexerBuilder::new();
 
-	lexer_builder.ignore_rule(r"(^[ \t]+)").unwrap();
+	lexer_builder.ignore_rules(&[
+		r"(^[ \t]+)",
+		r"(^[\r\n]+)"
+	]).unwrap();
+
 	lexer_builder.add_rules(&[
 		("COL",   r"(^[:])"),
 		("DIV",   r"(^[/])"),
@@ -219,11 +209,11 @@ fn main() {
 		("LPAR",  r"(^[(])"),
 		("MINUS", r"(^[-])"),
 		("MULT",  r"(^[*])"),
-		("NL",    r"(^[\r\n]+)"),
 		("NUM",   r"(^\d+(\.\d+)?)"),
 		("PLUS",  r"(^[+])"),
 		("RCBR",  r"(^[}])"),
-		("RPAR",  r"(^[)])")
+		("RPAR",  r"(^[)])"),
+		("SEMI",  r"(^[;])")
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
@@ -246,22 +236,21 @@ fn main() {
 		("expr",       "NUM MULT expr", expr_op),
 		("expr",       "NUM DIV expr", expr_op),
 		("expr",       "NUM", expr_num),
-		("func",       "FUNC opt_nl LCBR opt_nl stmts opt_nl RCBR", func),
-		("func_proto", "FUNC", func_proto),
+		//("func",       "FUNC ID LCBR stmts RCBR", func),
+		("func",       "FUNC ID LCBR RCBR", func),
+		("func_proto", "FUNC ID", func_proto),
 		("item",       "func", item),
 		("item",       "func_proto", item),
-		("label",      "opt_nl ID COL item opt_nl", label),
-		("opt_nl",     "NL", opt_new_line),
-		("opt_nl",     "", opt_new_line),
 		("program",    "stmts", program),
 		("program",    "", program),
 		("stmt",       "expr", stmt),
-		("stmt",       "label", stmt),
-		("stmts",      "stmt stmts", stmts),
+		("stmt",       "func", stmt),
+		("stmt",       "func_proto", stmt),
+		//("stmts",      "stmt stmts", stmts),
 		("stmts",      "stmt", stmts),
 		("stmts",      "", stmts),
 	]).unwrap();
-
+	
 	let mut parser = parser_builder.build();
 
 	let ast = match parser.parse(lexer.lex(&input)) {

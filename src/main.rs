@@ -5,16 +5,15 @@ use parse::*;
 #[derive(Debug, Clone)]
 pub enum Item {
 	Func(Func),
-	FuncProto(FuncProto)
+	FuncProto(FuncProto),
+	VarDecl(VarDecl)
 }
-/*
+
 #[derive(Debug, Clone)]
 pub struct Func {
+	pub id: String,
 	pub stmts: Stmts
 }
-*/
-#[derive(Debug, Clone)]
-pub struct Func;
 
 #[derive(Debug, Clone)]
 pub struct FuncProto {
@@ -22,10 +21,14 @@ pub struct FuncProto {
 }
 
 #[derive(Debug, Clone)]
+pub struct VarDecl {
+	pub id: String
+}
+
+#[derive(Debug, Clone)]
 pub enum Stmt {
 	Expr(Expr),
-	Func(Func),
-	FuncProto(FuncProto)
+	Item(Item)
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +53,8 @@ pub enum Node {
 	Stmt(Stmt),
 	Stmts(Stmts),
 	Expr(Expr),
-	Program(Option<Stmts>)
+	Program(Option<Stmts>),
+	VarDecl(VarDecl)
 }
 
 impl ASTNode for Node {
@@ -95,23 +99,24 @@ fn expr_op(nodes: &[Node]) -> Result<Node, String> {
 		"PLUS" => left.symbol().parse::<f64>().unwrap() + right.value,
 		"MULT" => left.symbol().parse::<f64>().unwrap() * right.value,
 		"DIV" => left.symbol().parse::<f64>().unwrap() / right.value,
-		_ => return Err(format!("Invalid operator '{}' in expr_op", op.name()))
+		_ => return Err(format!("Invalid operator '{}' in 'expr_op'", op.name()))
 	};
 
 	Ok(Node::Expr(Expr { value }))
 }
-/*
+
 fn func(nodes: &[Node]) -> Result<Node, String> {
-	let stmts = match &nodes[2] {
+	let id = match &nodes[1] {
+		Node::Token(token) if token.name() == "ID" => token.symbol().to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[1]))
+	};
+
+	let stmts = match &nodes[3] {
 		Node::Stmts(x) => x.to_owned(),
 		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[4]))
 	};
 
-	Ok(Node::Func(Func { stmts }))
-}
-*/
-fn func(_nodes: &[Node]) -> Result<Node, String> {
-	Ok(Node::Func(Func))
+	Ok(Node::Func(Func { id, stmts }))
 }
 
 fn func_proto(nodes: &[Node]) -> Result<Node, String> {
@@ -127,6 +132,7 @@ fn item(nodes: &[Node]) -> Result<Node, String> {
 	match &nodes[0] {
 		Node::Func(x) => Ok(Node::Item(Item::Func(x.to_owned()))),
 		Node::FuncProto(x) => Ok(Node::Item(Item::FuncProto(x.to_owned()))),
+		Node::VarDecl(x) => Ok(Node::Item(Item::VarDecl(x.to_owned()))),
 		_ => Err(format!("Invalid node '{:?}' in 'item'", nodes[0]))
 	}
 }
@@ -145,8 +151,7 @@ fn program(nodes: &[Node]) -> Result<Node, String> {
 fn stmt(nodes: &[Node]) -> Result<Node, String> {
 	Ok(Node::Stmt(match nodes[0].to_owned() {
 		Node::Expr(x) => Stmt::Expr(x),
-		Node::Func(x) => Stmt::Func(x),
-		Node::FuncProto(x) => Stmt::FuncProto(x),
+		Node::Item(x) => Stmt::Item(x),
 		_ => return Err(format!("Invalid node '{:?}' in 'stmt'", nodes[0]))
 	}))
 }
@@ -170,6 +175,15 @@ fn stmts(nodes: &[Node]) -> Result<Node, String> {
 	stmts_vec.extend(node_stmts);
 
 	Ok(Node::Stmts(Stmts { stmts: stmts_vec }))
+}
+
+fn var_decl(nodes: &[Node]) -> Result<Node, String> {
+	let id = match &nodes[1] {
+		Node::Token(token) if token.name() == "ID" => token.symbol().to_owned(),
+		_ => return Err(format!("Invalid node '{:?}' in 'var'", nodes[1]))
+	};
+
+	Ok(Node::VarDecl(VarDecl { id }))
 }
 
 fn main() {
@@ -201,23 +215,31 @@ fn main() {
 	]).unwrap();
 
 	lexer_builder.add_rules(&[
-		("COL",   r"(^[:])"),
-		("DIV",   r"(^[/])"),
+		// Keywords
 		("FUNC",  r"(^func)"),
+		("VAR",   r"(^var)"),
+
+		// Operators
+		("PLUS",  r"(^\+)"),
+		("MINUS", r"(^-)"),
+		("MULT",  r"(^\*)"),
+		("DIV",   r"(^/)"),
+
+		// Identifier / Literal
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
-		("LCBR",  r"(^[{])"),
-		("LPAR",  r"(^[(])"),
-		("MINUS", r"(^[-])"),
-		("MULT",  r"(^[*])"),
 		("NUM",   r"(^\d+(\.\d+)?)"),
-		("PLUS",  r"(^[+])"),
-		("RCBR",  r"(^[}])"),
-		("RPAR",  r"(^[)])"),
-		("SEMI",  r"(^[;])")
+
+		// Misc
+		("COL",   r"(^:)"),
+		("LCBR",  r"(^\{)"),
+		("LPAR",  r"(^\()"),
+		("RCBR",  r"(^\})"),
+		("RPAR",  r"(^\))"),
+		("SEMI",  r"(^;)")
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
-/*
+
 	for token in lexer.lex(&input) {
 		match token {
 			Ok(token) => println!("{:#?}", token),
@@ -227,7 +249,7 @@ fn main() {
 			}
 		}
 	}
-*/
+
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
 	parser_builder.add_patterns(&[
@@ -236,19 +258,18 @@ fn main() {
 		("expr",       "NUM MULT expr", expr_op),
 		("expr",       "NUM DIV expr", expr_op),
 		("expr",       "NUM", expr_num),
-		//("func",       "FUNC ID LCBR stmts RCBR", func),
-		("func",       "FUNC ID LCBR RCBR", func),
+		("func",       "FUNC ID LCBR stmts RCBR", func),
 		("func_proto", "FUNC ID", func_proto),
 		("item",       "func", item),
 		("item",       "func_proto", item),
+		("item",       "var_decl", item),
 		("program",    "stmts", program),
 		("program",    "", program),
-		("stmt",       "expr", stmt),
-		("stmt",       "func", stmt),
-		("stmt",       "func_proto", stmt),
-		//("stmts",      "stmt stmts", stmts),
+		("stmt",       "item", stmt),
+		("stmts",      "stmt stmts", stmts),
 		("stmts",      "stmt", stmts),
 		("stmts",      "", stmts),
+		("var_decl",   "VAR ID SEMI", var_decl)
 	]).unwrap();
 	
 	let mut parser = parser_builder.build();

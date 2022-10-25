@@ -22,7 +22,8 @@ pub struct FuncProto {
 
 #[derive(Debug, Clone)]
 pub struct VarDecl {
-	pub id: String
+	pub id: String,
+	pub expr: Option<Expr>
 }
 
 #[derive(Debug, Clone)]
@@ -183,7 +184,13 @@ fn var_decl(nodes: &[Node]) -> Result<Node, String> {
 		_ => return Err(format!("Invalid node '{:?}' in 'var'", nodes[1]))
 	};
 
-	Ok(Node::VarDecl(VarDecl { id }))
+	let expr = match nodes.get(3) {
+		Some(Node::Expr(expr)) => Some(expr.to_owned()),
+		Some(_) => return Err(format!("Invalid node '{:?}' in 'var'", nodes[3])),
+		None => None
+	};
+
+	Ok(Node::VarDecl(VarDecl { id, expr }))
 }
 
 fn main() {
@@ -210,8 +217,7 @@ fn main() {
 	let mut lexer_builder = LexerBuilder::new();
 
 	lexer_builder.ignore_rules(&[
-		r"(^[ \t]+)",
-		r"(^[\r\n]+)"
+		r"(^[ \r\n\t]+)"
 	]).unwrap();
 
 	lexer_builder.add_rules(&[
@@ -224,6 +230,7 @@ fn main() {
 		("MINUS", r"(^-)"),
 		("MULT",  r"(^\*)"),
 		("DIV",   r"(^/)"),
+		("EQ",    r"(^=)"),
 
 		// Identifier / Literal
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
@@ -269,7 +276,8 @@ fn main() {
 		("stmts",      "stmt stmts", stmts),
 		("stmts",      "stmt", stmts),
 		("stmts",      "", stmts),
-		("var_decl",   "VAR ID SEMI", var_decl)
+		("var_decl",   "VAR ID SEMI", var_decl),
+		("var_decl",   "VAR ID EQ expr SEMI", var_decl)
 	]).unwrap();
 	
 	let mut parser = parser_builder.build();

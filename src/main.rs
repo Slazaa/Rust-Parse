@@ -144,6 +144,13 @@ fn literal_int(nodes: &[Node]) -> Result<Node, String> {
 	}))
 }
 
+fn literal_float(nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::Literal(Literal {
+		kind: LiteralKind::Float,
+		value: nodes[0].token().unwrap().symbol().to_owned()
+	}))
+}
+
 fn program(nodes: &[Node]) -> Result<Node, String> {
 	if nodes.is_empty() {
 		return Ok(Node::Program(None));
@@ -240,8 +247,8 @@ fn main() {
 
 		// Identifier / Literal
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
-		("INT",   r"(^\d+)"),
 		("FLOAT", r"(^\d+\.\d+)"),
+		("INT",   r"(^\d+)"),
 
 		// Misc
 		("COL",   r"(^:)"),
@@ -274,6 +281,7 @@ fn main() {
 		("item",       "func_proto", item),
 		("item",       "var_decl", item),
 		("literal",    "INT", literal_int),
+		("literal",    "FLOAT", literal_float),
 		("program",    "stmts", program),
 		("program",    "", program),
 		("stmt",       "item", stmt),

@@ -38,8 +38,30 @@ pub struct Stmts {
 }
 
 #[derive(Debug, Clone)]
-pub struct Expr {
-	pub value: f64
+pub enum Expr {
+	Literal(Literal),
+	BinExpr()
+}
+
+#[derive(Debug, Clone)]
+pub enum LiteralKind {
+	Char,
+	Float,
+	Int,
+	String
+}
+
+#[derive(Debug, Clone)]
+pub struct Literal {
+	pub kind: LiteralKind,
+	pub value: String
+}
+
+#[derive(Debug, Clone)]
+pub struct BinExpr {
+	pub left: Expr,
+	pub op: String,
+	pub right: Expr
 }
 
 #[derive(Debug, Clone)]
@@ -53,6 +75,7 @@ pub enum Node {
 	FuncProto(FuncProto),
 	Stmt(Stmt),
 	Stmts(Stmts),
+	Literal(Literal),
 	Expr(Expr),
 	Program(Option<Stmts>),
 	VarDecl(VarDecl)
@@ -75,35 +98,11 @@ impl ASTNode for Node {
 	}
 }
 
-fn expr_num(nodes: &[Node]) -> Result<Node, String> {
-	Ok(Node::Expr(Expr { value: nodes[0].token().unwrap().symbol().parse::<f64>().unwrap() }))
-}
-
-fn expr_op(nodes: &[Node]) -> Result<Node, String> {
-	let left = match &nodes[0] {
-		Node::Token(x) if x.name() == "NUM" => x,
-		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[0]))
-	};
-
-	let op = match &nodes[1] {
-		Node::Token(x) => x,
-		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[1]))
-	};
-
-	let right = match &nodes[2] {
-		Node::Expr(x) => x,
-		_ => return Err(format!("Invalid node '{:?}' in 'expr_op'", nodes[2]))
-	};
-
-	let value = match op.name().as_str() {
-		"MINUS" => left.symbol().parse::<f64>().unwrap() - right.value,
-		"PLUS" => left.symbol().parse::<f64>().unwrap() + right.value,
-		"MULT" => left.symbol().parse::<f64>().unwrap() * right.value,
-		"DIV" => left.symbol().parse::<f64>().unwrap() / right.value,
-		_ => return Err(format!("Invalid operator '{}' in 'expr_op'", op.name()))
-	};
-
-	Ok(Node::Expr(Expr { value }))
+fn expr_literal(nodes: &[Node]) -> Result<Node, String> {
+	Ok(match &nodes[0] {
+		Node::Literal(x) => Node::Expr(Expr::Literal(x.to_owned())),
+		_ => return Err(format!("Invalid node '{:?}' in 'func'", nodes[0]))
+	})
 }
 
 fn func(nodes: &[Node]) -> Result<Node, String> {
@@ -136,6 +135,13 @@ fn item(nodes: &[Node]) -> Result<Node, String> {
 		Node::VarDecl(x) => Ok(Node::Item(Item::VarDecl(x.to_owned()))),
 		_ => Err(format!("Invalid node '{:?}' in 'item'", nodes[0]))
 	}
+}
+
+fn literal_int(nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::Literal(Literal {
+		kind: LiteralKind::Int,
+		value: nodes[0].token().unwrap().symbol().to_owned()
+	}))
 }
 
 fn program(nodes: &[Node]) -> Result<Node, String> {
@@ -234,7 +240,8 @@ fn main() {
 
 		// Identifier / Literal
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
-		("NUM",   r"(^\d+(\.\d+)?)"),
+		("INT",   r"(^\d+)"),
+		("FLOAT", r"(^\d+\.\d+)"),
 
 		// Misc
 		("COL",   r"(^:)"),
@@ -246,7 +253,7 @@ fn main() {
 	]).unwrap();
 
 	let lexer = lexer_builder.build();
-
+/*
 	for token in lexer.lex(&input) {
 		match token {
 			Ok(token) => println!("{:#?}", token),
@@ -256,20 +263,17 @@ fn main() {
 			}
 		}
 	}
-
+*/
 	let mut parser_builder = parse::ParserBuilder::<Node>::new(&lexer.rules().iter().map(|x| x.name().as_str()).collect::<Vec<&str>>());
 
 	parser_builder.add_patterns(&[
-		("expr",       "NUM PLUS expr", expr_op),
-		("expr",       "NUM MINUS expr", expr_op),
-		("expr",       "NUM MULT expr", expr_op),
-		("expr",       "NUM DIV expr", expr_op),
-		("expr",       "NUM", expr_num),
+		("expr",       "literal", expr_literal),
 		("func",       "FUNC ID LCBR stmts RCBR", func),
 		("func_proto", "FUNC ID", func_proto),
 		("item",       "func", item),
 		("item",       "func_proto", item),
 		("item",       "var_decl", item),
+		("literal",    "INT", literal_int),
 		("program",    "stmts", program),
 		("program",    "", program),
 		("stmt",       "item", stmt),

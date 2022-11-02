@@ -48,7 +48,7 @@ pub enum LiteralKind {
 	Char,
 	Float,
 	Int,
-	String
+	Str
 }
 
 #[derive(Debug, Clone)]
@@ -151,6 +151,13 @@ fn literal_float(nodes: &[Node]) -> Result<Node, String> {
 	}))
 }
 
+fn literal_str(nodes: &[Node]) -> Result<Node, String> {
+	Ok(Node::Literal(Literal {
+		kind: LiteralKind::Str,
+		value: nodes[0].token().unwrap().symbol().to_owned()
+	}))
+}
+
 fn program(nodes: &[Node]) -> Result<Node, String> {
 	if nodes.is_empty() {
 		return Ok(Node::Program(None));
@@ -249,6 +256,7 @@ fn main() {
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
 		("FLOAT", r"(^\d+\.\d+)"),
 		("INT",   r"(^\d+)"),
+		("STR",   r#"(^\".*\")"#),
 
 		// Misc
 		("COL",   r"(^:)"),
@@ -282,6 +290,7 @@ fn main() {
 		("item",       "var_decl", item),
 		("literal",    "INT", literal_int),
 		("literal",    "FLOAT", literal_float),
+		("literal",    "STR", literal_str),
 		("program",    "stmts", program),
 		("program",    "", program),
 		("stmt",       "item", stmt),

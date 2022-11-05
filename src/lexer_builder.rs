@@ -20,8 +20,8 @@ impl LexerBuilder {
 
 	pub fn add_rules(&mut self, rules: &[(&str, &str)]) -> Result<(), String> {
 		for (name, pattern) in rules {
-			if self.add_rule(name, pattern).is_err() {
-				return Err(format!("Invalid regex '{}'", pattern))
+			if let Err(e) = self.add_rule(name, pattern) {
+				return Err(e)
 			}
 		}
 

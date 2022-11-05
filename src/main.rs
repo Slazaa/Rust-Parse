@@ -253,10 +253,11 @@ fn main() {
 		("EQ",    r"(^=)"),
 
 		// Identifier / Literal
+		("BOOL",  r"(^(false|true))"),
 		("ID",    r"(^[a-zA-Z_][a-zA-Z0-9_]*)"),
 		("FLOAT", r"(^\d+\.\d+)"),
 		("INT",   r"(^\d+)"),
-		("STR",   r#"(^\".*\")"#),
+		("STR",   r#"(^".*")"#),
 
 		// Misc
 		("COL",   r"(^:)"),

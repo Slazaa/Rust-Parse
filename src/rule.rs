@@ -12,7 +12,7 @@ impl Rule {
 			name: name.to_owned(),
 			pattern: match Regex::new(pattern) {
 				Ok(x) => x,
-				Err(_) => return Err("Invalid regex".to_owned())
+				Err(e) => return Err(format!("Invalid regex: {}", e))
 			}
 		})
 	}

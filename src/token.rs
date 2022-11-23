@@ -19,10 +19,21 @@ impl Default for Position {
 	}
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct Location {
+	pub start: Position,
+	pub end: Position
+}
+
+impl Default for Location {
+	fn default() -> Self {
+		Location { start: Position::default(), end: Position::default() }
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct Token {
 	pub name: String,
 	pub symbol: String,
-	pub start_pos: Position,
-	pub end_pos: Position
+	pub location: Location
 }

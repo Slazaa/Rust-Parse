@@ -1,6 +1,6 @@
 use regex::Match;
 
-use crate::{Rule, Token, Position, Error};
+use crate::{Rule, Token, Position, Error, Location};
 
 #[derive(Clone)]
 pub struct Lexer {
@@ -32,8 +32,7 @@ impl Lexer {
 pub struct LexerStream {
 	lexer: Lexer,
 	input: String,
-	pos: Position,
-	start_pos: Position
+	location: Location
 }
 
 impl LexerStream {
@@ -41,16 +40,15 @@ impl LexerStream {
 		Self {
 			lexer: lexer.clone(),
 			input: input.to_owned(),
-			pos: Position::default(),
-			start_pos: Position::default()
+			location: Location::default()
 		}
 	}
 
 	pub fn update_pos(&mut self, mat: &Match) {
-		self.pos.idx += mat.end();
-		self.pos.line += mat.as_str().matches('\n').count();
-		self.pos.col += match self.input[..mat.start()].rfind('\n') {
-			Some(last_nl) => self.pos.idx - last_nl,
+		self.location.end.idx += mat.end();
+		self.location.end.line += mat.as_str().matches('\n').count();
+		self.location.end.col += match self.input[..mat.start()].rfind('\n') {
+			Some(last_nl) => self.location.end.idx - last_nl,
 			None => mat.end()
 		};
 		self.input = self.input[mat.end()..].to_owned();
@@ -61,7 +59,7 @@ impl Iterator for LexerStream {
 	type Item = Result<Token, (Error, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.start_pos = self.pos;
+		self.location.start = self.location.end;
 
 		loop {
 			if self.input.is_empty() {
@@ -87,15 +85,15 @@ impl Iterator for LexerStream {
 			if let Some(mat) = rule.pattern().find(&self.input.clone()) {
 				let rule_name = rule.name().clone();
 				self.update_pos(&mat);
+				
 				return Some(Ok(Token {
 					name: rule_name,
 					symbol: mat.as_str().to_owned(),
-					start_pos: self.start_pos,
-					end_pos: self.pos
+					location: self.location
 				}));
 			}
 		}
 
-		Some(Err((Error::InvalidToken, self.pos)))
+		Some(Err((Error::InvalidToken, self.location.end)))
 	}
 }

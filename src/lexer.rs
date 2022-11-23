@@ -1,3 +1,5 @@
+use std::fs;
+
 use regex::Match;
 
 use crate::{Rule, Token, Position, Error, Location};
@@ -5,14 +7,14 @@ use crate::{Rule, Token, Position, Error, Location};
 #[derive(Clone)]
 pub struct Lexer {
 	rules: Vec<Rule>,
-	ignore_rules: Vec<Rule>,
+	ignore_rules: Vec<Rule>
 }
 
 impl Lexer {
 	pub fn new(rules: Vec<Rule>, ignore_rules: Vec<Rule>) -> Self {
 		Self {
 			rules,
-			ignore_rules,
+			ignore_rules
 		}
 	}
 
@@ -25,7 +27,16 @@ impl Lexer {
 	}
 
 	pub fn lex(&self, input: &str) -> LexerStream {
-		LexerStream::new(self, input)
+		LexerStream::new(self, input, None)
+	}
+
+	pub fn lex_from_file(&self, filename: &str) -> Result<LexerStream, Error> {
+		let input = match fs::read_to_string(filename) {
+			Ok(x) => x,
+			Err(_) => return Err(Error::FileNotFound)
+		};
+
+		Ok(LexerStream::new(self, &input, Some(filename.to_owned())))
 	}
 }
 
@@ -36,11 +47,14 @@ pub struct LexerStream {
 }
 
 impl LexerStream {
-	pub fn new(lexer: &Lexer, input: &str) -> Self {
+	pub fn new(lexer: &Lexer, input: &str, filename: Option<String>) -> Self {
 		Self {
 			lexer: lexer.clone(),
 			input: input.to_owned(),
-			location: Location::default()
+			location: Location {
+				filename,
+				..Default::default()
+			}
 		}
 	}
 
@@ -59,7 +73,7 @@ impl Iterator for LexerStream {
 	type Item = Result<Token, (Error, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.location.start = self.location.end;
+		self.location.start = self.location.end.to_owned();
 
 		loop {
 			if self.input.is_empty() {
@@ -89,11 +103,11 @@ impl Iterator for LexerStream {
 				return Some(Ok(Token {
 					name: rule_name,
 					symbol: mat.as_str().to_owned(),
-					location: self.location
+					location: self.location.to_owned()
 				}));
 			}
 		}
 
-		Some(Err((Error::InvalidToken, self.location.end)))
+		Some(Err((Error::InvalidToken, self.location.end.to_owned())))
 	}
 }

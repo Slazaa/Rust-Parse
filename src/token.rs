@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Position {
 	pub idx: usize,
 	pub line: usize,
@@ -19,15 +19,16 @@ impl Default for Position {
 	}
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Location {
+	pub filename: Option<String>,
 	pub start: Position,
 	pub end: Position
 }
 
 impl Default for Location {
 	fn default() -> Self {
-		Location { start: Position::default(), end: Position::default() }
+		Location { filename: None, start: Position::default(), end: Position::default() }
 	}
 }
 

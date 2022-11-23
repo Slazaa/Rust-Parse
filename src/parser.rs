@@ -4,6 +4,7 @@ use crate::{LexerStream, Pattern, ASTNode, Position};
 
 #[derive(Debug)]
 pub enum Error {
+	FileNotFound,
 	InvalidPatternName,
 	InvalidToken,
 	NotMatching,
@@ -53,7 +54,7 @@ where
 					let token = match lexer_stream.next() {
 						Some(Ok(x)) => x,
 						Some(Err(e)) => return (Err(e), tokens),
-						None => return (Err((Error::NotMatching, self.pos)), tokens)
+						None => return (Err((Error::NotMatching, self.pos.to_owned())), tokens)
 					};
 
 					nodes.push((token.name.to_owned(), N::new_token(&token)));
@@ -61,7 +62,7 @@ where
 				}
 
 				if nodes[idx].0 != *elem {
-					return (Err((Error::NotMatching, self.pos)), tokens);
+					return (Err((Error::NotMatching, self.pos.to_owned())), tokens);
 				}
 			} else if self.is_elem_node(elem) {
 				let eval_tokens = match nodes.len() > idx {
@@ -77,13 +78,13 @@ where
 				nodes.push((elem.to_owned(), res_node));
 				nodes.append(&mut rem_tokens);
 			} else {
-				return (Err((Error::UnknownElem(elem.to_owned()), self.pos)), tokens);
+				return (Err((Error::UnknownElem(elem.to_owned()), self.pos.to_owned())), tokens);
 			}
 		}
 
 		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => (Ok(x), nodes[pattern.elems().len()..].to_vec()),
-			Err(e) => (Err((Error::PatternFunc(e), self.pos)), tokens)
+			Err(e) => (Err((Error::PatternFunc(e), self.pos.to_owned())), tokens)
 		}
 	}
 
@@ -91,7 +92,7 @@ where
 		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
-			return (Err((Error::InvalidPatternName, self.pos)), Vec::new());
+			return (Err((Error::InvalidPatternName, self.pos.to_owned())), Vec::new());
 		}
 
 		for pattern in &patterns {
@@ -102,7 +103,7 @@ where
 			}
 		}
 
-		(Err((Error::NotMatching, self.pos)), tokens)
+		(Err((Error::NotMatching, self.pos.to_owned())), tokens)
 	}
 
 	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (Error, Position)> {
@@ -120,7 +121,7 @@ where
 
 		if !rem_tokens.is_empty() {
 			println!("{:#?}", rem_tokens);
-			return Err((Error::TokenRemaining, self.pos));
+			return Err((Error::TokenRemaining, self.pos.to_owned()));
 		}
 
 		Ok(res_node)

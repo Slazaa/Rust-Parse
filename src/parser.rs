@@ -32,7 +32,7 @@ where
 		Self {
 			token_names: token_names.to_owned(),
 			patterns: patterns.to_owned(),
-			pos: Position::new(0, 1, 1)
+			pos: Position::default()
 		}
 	}
 
@@ -56,8 +56,8 @@ where
 						None => return (Err((Error::NotMatching, self.pos)), tokens)
 					};
 
-					nodes.push((token.name().to_owned(), N::new_token(&token)));
-					tokens.push((token.name().to_owned(), N::new_token(&token)));
+					nodes.push((token.name.to_owned(), N::new_token(&token)));
+					tokens.push((token.name.to_owned(), N::new_token(&token)));
 				}
 
 				if nodes[idx].0 != *elem {

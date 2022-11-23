@@ -41,16 +41,16 @@ impl LexerStream {
 		Self {
 			lexer: lexer.clone(),
 			input: input.to_owned(),
-			pos: Position::new(0, 1, 1),
-			start_pos: Position::new(0, 1, 1)
+			pos: Position::default(),
+			start_pos: Position::default()
 		}
 	}
 
 	pub fn update_pos(&mut self, mat: &Match) {
-		*self.pos.idx_mut() += mat.end();
-		*self.pos.line_mut() += mat.as_str().matches('\n').count();
-		*self.pos.col_mut() += match self.input[..mat.start()].rfind('\n') {
-			Some(last_nl) => self.pos.idx() - last_nl,
+		self.pos.idx += mat.end();
+		self.pos.line += mat.as_str().matches('\n').count();
+		self.pos.col += match self.input[..mat.start()].rfind('\n') {
+			Some(last_nl) => self.pos.idx - last_nl,
 			None => mat.end()
 		};
 		self.input = self.input[mat.end()..].to_owned();
@@ -87,7 +87,12 @@ impl Iterator for LexerStream {
 			if let Some(mat) = rule.pattern().find(&self.input.clone()) {
 				let rule_name = rule.name().clone();
 				self.update_pos(&mat);
-				return Some(Ok(Token::new(&rule_name, mat.as_str(), &self.start_pos, &self.pos)));
+				return Some(Ok(Token {
+					name: rule_name,
+					symbol: mat.as_str().to_owned(),
+					start_pos: self.start_pos,
+					end_pos: self.pos
+				}));
 			}
 		}
 

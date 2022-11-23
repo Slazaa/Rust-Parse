@@ -2,43 +2,9 @@ use std::fmt;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Position {
-	idx: usize,
-	line: usize,
-	col: usize
-}
-
-impl Position {
-	pub fn new(idx: usize, line: usize, col: usize) -> Self {
-		Self {
-			idx,
-			line,
-			col
-		}
-	}
-
-	pub fn idx(&self) -> usize {
-		self.idx
-	}
-
-	pub fn line(&self) -> usize {
-		self.line
-	}
-
-	pub fn col(&self) -> usize {
-		self.col
-	}
-
-	pub fn idx_mut(&mut self) -> &mut usize {
-		&mut self.idx
-	}
-
-	pub fn line_mut(&mut self) -> &mut usize {
-		&mut self.line
-	}
-
-	pub fn col_mut(&mut self) -> &mut usize {
-		&mut self.col
-	}
+	pub idx: usize,
+	pub line: usize,
+	pub col: usize
 }
 
 impl fmt::Display for Position {
@@ -47,37 +13,16 @@ impl fmt::Display for Position {
 	}
 }
 
-#[derive(Clone, Debug)]
-pub struct Token {
-	name: String,
-	symbol: String,
-	start_pos: Position,
-	end_pos: Position
+impl Default for Position {
+	fn default() -> Self {
+		Self { idx: 0, line: 1, col: 1 }
+	}
 }
 
-impl Token {
-	pub fn new(name: &str, symbol: &str, start_pos: &Position, end_pos: &Position) -> Self {
-		Self {
-			name: name.to_owned(),
-			symbol: symbol.to_owned(),
-			start_pos: *start_pos,
-			end_pos: *end_pos
-		}
-	}
-
-	pub fn name(&self) -> &String {
-		&self.name
-	}
-
-	pub fn symbol(&self) -> &String {
-		&self.symbol
-	}
-
-	pub fn start_pos(&self) -> &Position {
-		&self.start_pos
-	}
-
-	pub fn end_pos(&self) -> &Position {
-		&self.end_pos
-	}
+#[derive(Clone, Debug)]
+pub struct Token {
+	pub name: String,
+	pub symbol: String,
+	pub start_pos: Position,
+	pub end_pos: Position
 }

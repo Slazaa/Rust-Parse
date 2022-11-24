@@ -100,8 +100,6 @@ impl Iterator for LexerStream {
 				let rule_name = rule.name().clone();
 				self.update_pos(&mat);
 
-				println!("{:#?}", self.loc);
-				
 				return Some(Ok(Token {
 					name: rule_name,
 					symbol: mat.as_str().to_owned(),

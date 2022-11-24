@@ -36,5 +36,5 @@ impl Default for Location {
 pub struct Token {
 	pub name: String,
 	pub symbol: String,
-	pub location: Location
+	pub loc: Location
 }

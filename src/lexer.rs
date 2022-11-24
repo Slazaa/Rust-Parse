@@ -43,7 +43,7 @@ impl Lexer {
 pub struct LexerStream {
 	lexer: Lexer,
 	input: String,
-	location: Location
+	loc: Location
 }
 
 impl LexerStream {
@@ -51,7 +51,7 @@ impl LexerStream {
 		Self {
 			lexer: lexer.clone(),
 			input: input.to_owned(),
-			location: Location {
+			loc: Location {
 				filename,
 				..Default::default()
 			}
@@ -59,10 +59,10 @@ impl LexerStream {
 	}
 
 	pub fn update_pos(&mut self, mat: &Match) {
-		self.location.end.idx += mat.end();
-		self.location.end.line += mat.as_str().matches('\n').count();
-		self.location.end.col += match self.input[..mat.start()].rfind('\n') {
-			Some(last_nl) => self.location.end.idx - last_nl,
+		self.loc.end.idx += mat.end();
+		self.loc.end.line += mat.as_str().matches('\n').count();
+		self.loc.end.col += match self.input[..mat.start()].rfind('\n') {
+			Some(last_nl) => self.loc.end.idx - last_nl,
 			None => mat.end()
 		};
 		self.input = self.input[mat.end()..].to_owned();
@@ -73,7 +73,7 @@ impl Iterator for LexerStream {
 	type Item = Result<Token, (Error, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.location.start = self.location.end.to_owned();
+		self.loc.start = self.loc.end.to_owned();
 
 		loop {
 			if self.input.is_empty() {
@@ -103,11 +103,11 @@ impl Iterator for LexerStream {
 				return Some(Ok(Token {
 					name: rule_name,
 					symbol: mat.as_str().to_owned(),
-					location: self.location.to_owned()
+					loc: self.loc.to_owned()
 				}));
 			}
 		}
 
-		Some(Err((Error::InvalidToken, self.location.end.to_owned())))
+		Some(Err((Error::InvalidToken, self.loc.end.to_owned())))
 	}
 }

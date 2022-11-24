@@ -99,6 +99,8 @@ impl Iterator for LexerStream {
 			if let Some(mat) = rule.pattern().find(&self.input.clone()) {
 				let rule_name = rule.name().clone();
 				self.update_pos(&mat);
+
+				println!("{:#?}", self.loc);
 				
 				return Some(Ok(Token {
 					name: rule_name,

@@ -19,17 +19,11 @@ impl Default for Position {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Location {
 	pub filename: Option<String>,
 	pub start: Position,
 	pub end: Position
-}
-
-impl Default for Location {
-	fn default() -> Self {
-		Location { filename: None, start: Position::default(), end: Position::default() }
-	}
 }
 
 #[derive(Clone, Debug)]

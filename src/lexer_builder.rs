@@ -20,9 +20,7 @@ impl LexerBuilder {
 
 	pub fn add_rules(&mut self, rules: &[(&str, &str)]) -> Result<(), String> {
 		for (name, pattern) in rules {
-			if let Err(e) = self.add_rule(name, pattern) {
-				return Err(e)
-			}
+			self.add_rule(name, pattern)?
 		}
 
 		Ok(())

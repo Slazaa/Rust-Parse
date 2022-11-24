@@ -2,7 +2,7 @@ use std::fs;
 
 use regex::Match;
 
-use crate::{Rule, Token, Position, Error, Location};
+use crate::{Rule, Token, Position, Error, Loc};
 
 #[derive(Clone)]
 pub struct Lexer {
@@ -43,7 +43,7 @@ impl Lexer {
 pub struct LexerStream {
 	lexer: Lexer,
 	input: String,
-	loc: Location
+	loc: Loc
 }
 
 impl LexerStream {
@@ -51,7 +51,7 @@ impl LexerStream {
 		Self {
 			lexer: lexer.clone(),
 			input: input.to_owned(),
-			loc: Location {
+			loc: Loc {
 				filename,
 				..Default::default()
 			}

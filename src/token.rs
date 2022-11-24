@@ -20,7 +20,7 @@ impl Default for Position {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct Location {
+pub struct Loc {
 	pub filename: Option<String>,
 	pub start: Position,
 	pub end: Position
@@ -30,5 +30,5 @@ pub struct Location {
 pub struct Token {
 	pub name: String,
 	pub symbol: String,
-	pub loc: Location
+	pub loc: Loc
 }

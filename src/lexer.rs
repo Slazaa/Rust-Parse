@@ -33,7 +33,7 @@ impl Lexer {
 	pub fn lex_from_file<E>(&self, filename: &str) -> Result<LexerStream<E>, Error<E>> {
 		let input = match fs::read_to_string(filename) {
 			Ok(x) => x,
-			Err(_) => return Err(Error::FileNotFound)
+			Err(_) => return Err(Error::FileNotFound(filename.to_owned()))
 		};
 
 		Ok(LexerStream::new(self, &input, Some(filename.to_owned())))

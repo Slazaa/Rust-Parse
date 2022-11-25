@@ -1,16 +1,33 @@
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 use crate::{LexerStream, Pattern, ASTNode, Position};
 
 #[derive(Debug)]
 pub enum Error<E> {
-	FileNotFound,
-	InvalidPatternName,
+	FileNotFound(String),
+	InvalidPatternName(String),
 	InvalidToken,
-	NotMatching,
+	NotMatching(String),
 	TokenRemaining,
 	UnknownElem(String),
 	PatternFunc(E)
+}
+
+impl<E> fmt::Display for Error<E>
+where
+	E: fmt::Display
+{
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", match self {
+			Self::FileNotFound(filename) => format!("File not found '{}'", filename),
+			Self::InvalidPatternName(name) => format!("Invalid pattern name '{}'", name),
+			Self::InvalidToken => "Invalid token".to_owned(),
+			Self::NotMatching(pattern_name) => format!("Could not find match for pattern '{}'", pattern_name),
+			Self::TokenRemaining => "Unused token remaining".to_owned(),
+			Self::UnknownElem(elem) => format!("Unknown element '{}'", elem),
+			Self::PatternFunc(err) => format!("{}", err)
+		})
+	}
 }
 
 pub struct Parser<N, E>
@@ -56,7 +73,7 @@ where
 					let token = match lexer_stream.next() {
 						Some(Ok(x)) => x,
 						Some(Err(e)) => return (Err(e), tokens),
-						None => return (Err((Error::NotMatching, self.pos.to_owned())), tokens)
+						None => return (Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned())), tokens)
 					};
 
 					nodes.push((token.name.to_owned(), N::new_token(&token)));
@@ -64,7 +81,7 @@ where
 				}
 
 				if nodes[idx].0 != *elem {
-					return (Err((Error::NotMatching, self.pos.to_owned())), tokens);
+					return (Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned())), tokens);
 				}
 			} else if self.is_elem_node(elem) {
 				let eval_tokens = match nodes.len() > idx {
@@ -94,18 +111,18 @@ where
 		let patterns: Vec<Pattern<N, E>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
-			return (Err((Error::InvalidPatternName, self.pos.to_owned())), Vec::new());
+			return (Err((Error::InvalidPatternName(pattern_name.to_owned()), self.pos.to_owned())), Vec::new());
 		}
 
 		for pattern in &patterns {
 			match self.eval_pattern(lexer_stream, pattern, tokens.to_owned()) {
 				(Ok(node), rem_tokens) => return (Ok(node), rem_tokens),
-				(Err((Error::NotMatching, _)), rem_tokens) => tokens = rem_tokens,
+				(Err((Error::NotMatching(_), _)), rem_tokens) => tokens = rem_tokens,
 				(Err(e), rem_tokens) => return (Err(e), rem_tokens)
 			}
 		}
 
-		(Err((Error::NotMatching, self.pos.to_owned())), tokens)
+		(Err((Error::NotMatching(pattern_name.to_owned()), self.pos.to_owned())), tokens)
 	}
 
 	pub fn parse(&mut self, mut lexer_stream: LexerStream<E>) -> Result<N, (Error<E>, Position)> {

@@ -5,7 +5,7 @@ use crate::{Parser, Pattern, ASTNode, PatternFunc};
 pub struct ParserBuilder<N, E>
 where
 	N: ASTNode + Clone + Debug,
-	E: Clone + Debug
+	E: Clone
 {
 	token_names: Vec<String>,
 	patterns: Vec<Pattern<N, E>>
@@ -14,7 +14,7 @@ where
 impl<N, E> ParserBuilder<N, E>
 where
 	N: ASTNode + Clone + Debug,
-	E: Clone + Debug
+	E: Clone
 {
 	pub fn new(token_names: &[&str]) -> Self {
 		Self {

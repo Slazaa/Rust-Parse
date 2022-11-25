@@ -3,30 +3,35 @@ use std::fmt::Debug;
 use crate::{LexerStream, Pattern, ASTNode, Position};
 
 #[derive(Debug)]
-pub enum Error {
+pub enum Error<E>
+where
+	E: Clone + Debug
+{
 	FileNotFound,
 	InvalidPatternName,
 	InvalidToken,
 	NotMatching,
 	TokenRemaining,
 	UnknownElem(String),
-	PatternFunc(String)
+	PatternFunc(E)
 }
 
-pub struct Parser<N>
+pub struct Parser<N, E>
 where
-	N: ASTNode + Clone + Debug
+	N: ASTNode + Clone + Debug,
+	E: Clone + Debug
 {
 	token_names: Vec<String>,
-	patterns: Vec<Pattern<N>>,
+	patterns: Vec<Pattern<N, E>>,
 	pos: Position
 }
 
-impl<N> Parser<N>
+impl<N, E> Parser<N, E>
 where
-	N: ASTNode + Clone + Debug
+	N: ASTNode + Clone + Debug,
+	E: Clone + Debug
 {
-	pub fn new(token_names: &[String], patterns: &[Pattern<N>]) -> Self {
+	pub fn new(token_names: &[String], patterns: &[Pattern<N, E>]) -> Self {
 		let mut patterns = patterns.to_vec();
 		patterns.dedup();
 
@@ -45,7 +50,7 @@ where
 		self.patterns.iter().map(|x| x.name()).any(|x| x == &elem.to_owned())
 	}
 
-	fn eval_pattern(&mut self, lexer_stream: &mut LexerStream, pattern: &Pattern<N>, mut tokens: Vec<(String, N)>) -> (Result<N, (Error, Position)>, Vec<(String, N)>) {
+	fn eval_pattern(&mut self, lexer_stream: &mut LexerStream<E>, pattern: &Pattern<N, E>, mut tokens: Vec<(String, N)>) -> (Result<N, (Error<E>, Position)>, Vec<(String, N)>) {
 		let mut nodes = tokens.clone();
 
 		for (idx, elem) in pattern.elems().iter().enumerate() {
@@ -88,8 +93,8 @@ where
 		}
 	}
 
-	fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream, pattern_name: &str, mut tokens: Vec<(String, N)>) -> (Result<N, (Error, Position)>, Vec<(String, N)>) {
-		let patterns: Vec<Pattern<N>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
+	fn eval_pattern_by_name(&mut self, lexer_stream: &mut LexerStream<E>, pattern_name: &str, mut tokens: Vec<(String, N)>) -> (Result<N, (Error<E>, Position)>, Vec<(String, N)>) {
+		let patterns: Vec<Pattern<N, E>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
 			return (Err((Error::InvalidPatternName, self.pos.to_owned())), Vec::new());
@@ -106,7 +111,7 @@ where
 		(Err((Error::NotMatching, self.pos.to_owned())), tokens)
 	}
 
-	pub fn parse(&mut self, mut lexer_stream: LexerStream) -> Result<N, (Error, Position)> {
+	pub fn parse(&mut self, mut lexer_stream: LexerStream<E>) -> Result<N, (Error<E>, Position)> {
 		let (res_node, mut rem_tokens) = match self.eval_pattern_by_name(&mut lexer_stream, "program", Vec::new()) {
 			(Ok(node), rem_tokens) => (node, rem_tokens.iter().map(|(_, token)| token.to_owned()).collect::<Vec<N>>()),
 			(Err(e), _) => return Err(e)

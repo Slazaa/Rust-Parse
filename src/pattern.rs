@@ -2,23 +2,23 @@ use std::cmp::Ordering;
 
 use crate::ASTNode;
 
-pub type PatternFunc<N> = fn(&[N]) -> Result<N, String>;
+pub type PatternFunc<N, E> = fn(&[N]) -> Result<N, E>;
 
 #[derive(Clone)]
-pub struct Pattern<N>
+pub struct Pattern<N, E>
 where
 	N: ASTNode
 {
 	name: String,
 	elems: Vec<String>,
-	func: PatternFunc<N>
+	func: PatternFunc<N, E>
 }
 
-impl<N> Pattern<N>
+impl<N, E> Pattern<N, E>
 where
 	N: ASTNode
 {
-	pub fn new(name: &str, elems: &[&str], func: PatternFunc<N>) -> Self {
+	pub fn new(name: &str, elems: &[&str], func: PatternFunc<N, E>) -> Self {
 		Self {
 			name: name.to_owned(),
 			elems: elems.iter()
@@ -36,12 +36,12 @@ where
 		&self.elems
 	}
 
-	pub fn func(&self) -> PatternFunc<N> {
+	pub fn func(&self) -> PatternFunc<N, E> {
 		self.func
 	}
 }
 
-impl<N> Ord for Pattern<N>
+impl<N, E> Ord for Pattern<N, E>
 where
 	N: ASTNode
 {
@@ -73,7 +73,7 @@ where
 	}
 }
 
-impl<N> PartialOrd for Pattern<N>
+impl<N, E> PartialOrd for Pattern<N, E>
 where
 	N: ASTNode
 {
@@ -82,7 +82,7 @@ where
 	}
 }
 
-impl<N> PartialEq for Pattern<N>
+impl<N, E> PartialEq for Pattern<N, E>
 where
 	N: ASTNode
 {
@@ -97,7 +97,7 @@ where
 	}
 }
 
-impl<N> Eq for Pattern<N>
+impl<N, E> Eq for Pattern<N, E>
 where
 	N: ASTNode
 {

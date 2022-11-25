@@ -1,4 +1,5 @@
-use std::fs;
+use std::{fs, marker::PhantomData};
+use std::fmt::Debug;
 
 use regex::Match;
 
@@ -26,11 +27,17 @@ impl Lexer {
 		&self.ignore_rules
 	}
 
-	pub fn lex(&self, input: &str) -> LexerStream {
+	pub fn lex<E>(&self, input: &str) -> LexerStream<E>
+	where
+		E: Clone + Debug
+	{
 		LexerStream::new(self, input, None)
 	}
 
-	pub fn lex_from_file(&self, filename: &str) -> Result<LexerStream, Error> {
+	pub fn lex_from_file<E>(&self, filename: &str) -> Result<LexerStream<E>, Error<E>>
+	where
+		E: Clone + Debug
+	{
 		let input = match fs::read_to_string(filename) {
 			Ok(x) => x,
 			Err(_) => return Err(Error::FileNotFound)
@@ -40,13 +47,20 @@ impl Lexer {
 	}
 }
 
-pub struct LexerStream {
+pub struct LexerStream<E>
+where
+	E: Clone + Debug
+{
 	lexer: Lexer,
 	input: String,
-	loc: Loc
+	loc: Loc,
+	phantom: PhantomData<E>
 }
 
-impl LexerStream {
+impl<E> LexerStream<E>
+where
+	E: Clone + Debug
+{
 	pub fn new(lexer: &Lexer, input: &str, filename: Option<String>) -> Self {
 		Self {
 			lexer: lexer.clone(),
@@ -54,23 +68,30 @@ impl LexerStream {
 			loc: Loc {
 				filename,
 				..Default::default()
-			}
+			},
+			phantom: PhantomData
 		}
 	}
 
 	pub fn update_pos(&mut self, mat: &Match) {
 		self.loc.end.idx += mat.end();
 		self.loc.end.line += mat.as_str().matches('\n').count();
-		self.loc.end.col += match self.input[..mat.start()].rfind('\n') {
-			Some(last_nl) => self.loc.end.idx - last_nl,
-			None => mat.end()
+
+		self.loc.end.col += if let Some(last_nl) = self.input[..mat.start()].rfind('\n') {
+			self.loc.end.idx - last_nl
+		} else {
+			mat.end()
 		};
+		
 		self.input = self.input[mat.end()..].to_owned();
 	}
 }
 
-impl Iterator for LexerStream {
-	type Item = Result<Token, (Error, Position)>;
+impl<E> Iterator for LexerStream<E>
+where
+	E: Clone + Debug
+{
+	type Item = Result<Token, (Error<E>, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.loc.start = self.loc.end.to_owned();

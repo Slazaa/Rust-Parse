@@ -3,10 +3,7 @@ use std::fmt::Debug;
 use crate::{LexerStream, Pattern, ASTNode, Position};
 
 #[derive(Debug)]
-pub enum Error<E>
-where
-	E: Clone + Debug
-{
+pub enum Error<E> {
 	FileNotFound,
 	InvalidPatternName,
 	InvalidToken,
@@ -19,7 +16,7 @@ where
 pub struct Parser<N, E>
 where
 	N: ASTNode + Clone + Debug,
-	E: Clone + Debug
+	E: Clone
 {
 	token_names: Vec<String>,
 	patterns: Vec<Pattern<N, E>>,
@@ -29,7 +26,7 @@ where
 impl<N, E> Parser<N, E>
 where
 	N: ASTNode + Clone + Debug,
-	E: Clone + Debug
+	E: Clone
 {
 	pub fn new(token_names: &[String], patterns: &[Pattern<N, E>]) -> Self {
 		let mut patterns = patterns.to_vec();

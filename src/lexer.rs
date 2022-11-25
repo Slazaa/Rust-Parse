@@ -1,5 +1,4 @@
 use std::{fs, marker::PhantomData};
-use std::fmt::Debug;
 
 use regex::Match;
 
@@ -27,17 +26,11 @@ impl Lexer {
 		&self.ignore_rules
 	}
 
-	pub fn lex<E>(&self, input: &str) -> LexerStream<E>
-	where
-		E: Clone + Debug
-	{
+	pub fn lex<E>(&self, input: &str) -> LexerStream<E> {
 		LexerStream::new(self, input, None)
 	}
 
-	pub fn lex_from_file<E>(&self, filename: &str) -> Result<LexerStream<E>, Error<E>>
-	where
-		E: Clone + Debug
-	{
+	pub fn lex_from_file<E>(&self, filename: &str) -> Result<LexerStream<E>, Error<E>> {
 		let input = match fs::read_to_string(filename) {
 			Ok(x) => x,
 			Err(_) => return Err(Error::FileNotFound)
@@ -47,20 +40,14 @@ impl Lexer {
 	}
 }
 
-pub struct LexerStream<E>
-where
-	E: Clone + Debug
-{
+pub struct LexerStream<E> {
 	lexer: Lexer,
 	input: String,
 	loc: Loc,
 	phantom: PhantomData<E>
 }
 
-impl<E> LexerStream<E>
-where
-	E: Clone + Debug
-{
+impl<E> LexerStream<E> {
 	pub fn new(lexer: &Lexer, input: &str, filename: Option<String>) -> Self {
 		Self {
 			lexer: lexer.clone(),
@@ -87,10 +74,7 @@ where
 	}
 }
 
-impl<E> Iterator for LexerStream<E>
-where
-	E: Clone + Debug
-{
+impl<E> Iterator for LexerStream<E> {
 	type Item = Result<Token, (Error<E>, Position)>;
 
 	fn next(&mut self) -> Option<Self::Item> {

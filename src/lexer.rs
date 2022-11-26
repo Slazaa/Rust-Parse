@@ -64,10 +64,7 @@ impl<E> LexerStream<E> {
 		self.loc.end.idx += mat.end();
 		self.loc.end.line += mat.as_str().matches('\n').count();
 
-		let tabs_col = match mat.as_str().matches('\t').count() {
-			Some(x) => x * 4,
-			None => 0
-		};
+		let tabs_col = mat.as_str().matches('\t').count() * 4;
 
 		self.loc.end.col = match mat.as_str().rfind('\n') {
 			Some(last_nl) => mat.end() - last_nl,

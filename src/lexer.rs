@@ -64,7 +64,7 @@ impl<E> LexerStream<E> {
 		self.loc.end.idx += mat.end();
 		self.loc.end.line += mat.as_str().matches('\n').count();
 
-		self.loc.end.col = if let Some(last_nl) = self.input[..mat.start()].rfind('\n') {
+		self.loc.end.col = if let Some(last_nl) = mat.as_str().rfind('\n') {
 			println!("New line in match!");
 			mat.end() - last_nl + 1
 		} else {

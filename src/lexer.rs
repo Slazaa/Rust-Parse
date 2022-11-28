@@ -26,8 +26,15 @@ impl Lexer {
 		&self.ignore_rules
 	}
 
-	pub fn lex<E>(&self, input: &str) -> LexerStream<E> {
-		LexerStream::new(self, input, None)
+	pub fn lex<E>(&self, input: &str) -> Result<Vec<Token>, (Error<E>, Position)> {
+		let mut res = Vec::new();
+		let lexer_stream = LexerStream::new(self, input, None);
+
+		for token in lexer_stream {
+			res.push(token?);
+		}
+
+		Ok(res)
 	}
 
 	pub fn lex_from_file<E>(&self, filename: &str) -> Result<LexerStream<E>, Error<E>> {

@@ -1,6 +1,6 @@
 use std::fmt::{self, Debug};
 
-use crate::{LexerStream, Pattern, ASTNode, Position};
+use crate::{LexerStream, Pattern, ASTNode, Position, Token};
 
 #[derive(Debug)]
 pub enum Error<E> {
@@ -63,7 +63,7 @@ where
 	fn is_elem_node(&self, elem: &str) -> bool {
 		self.patterns.iter().map(|x| x.name()).any(|x| x == &elem.to_owned())
 	}
-
+	/*
 	fn eval_pattern(&mut self, lexer_stream: &mut LexerStream<E>, pattern: &Pattern<N, E>, mut tokens: Vec<(String, N)>) -> (Result<N, (Error<E>, Position)>, Vec<(String, N)>) {
 		let mut nodes = tokens.clone();
 
@@ -144,5 +144,10 @@ where
 		}
 
 		Ok(res_node)
+	}
+	*/
+
+	pub fn parse(&mut self, tokens: &Vec<Token>) -> Result<N, (Error<E>, Position)> {
+		todo!();
 	}
 }

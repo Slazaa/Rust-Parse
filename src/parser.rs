@@ -155,7 +155,7 @@ where
 				while nodes.len() <= idx {
 					curr_idx += 1;
 
-					if idx >= tokens.len() {
+					if curr_idx >= tokens.len() {
 						return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
 					}
 

@@ -37,17 +37,22 @@ impl Lexer {
 		Ok(res)
 	}
 
-	pub fn lex_from_file<E>(&self, filename: &str) -> Result<Vec<Token>, (Error<E>, Position)> {
+	pub fn lex_from_file<E>(&self, filename: &str) -> Result<Vec<Token>, (Error<E>, Option<Position>)> {
 		let input = match fs::read_to_string(filename) {
 			Ok(x) => x,
-			Err(_) => return Err((Error::FileNotFound(filename.to_owned()), Position::default()))
+			Err(_) => return Err((Error::FileNotFound(filename.to_owned()), None))
 		};
 
 		let mut res = Vec::new();
 		let lexer_stream = LexerStream::new(self, &input, Some(filename.to_owned()));
 
 		for token in lexer_stream {
-			res.push(token?);
+			let token = match token {
+				Ok(x) => x,
+				Err((e, pos)) => return Err((e, Some(pos)))
+			};
+
+			res.push(token);
 		}
 
 		Ok(res)

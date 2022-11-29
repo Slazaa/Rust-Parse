@@ -146,7 +146,7 @@ where
 		Ok(res_node)
 	}
 	*/
-	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, (Error<E>, Position)> {
+	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, Error<E>> {
 		let mut nodes = Vec::new();
 		let mut curr_idx = 0;
 
@@ -156,7 +156,7 @@ where
 					let token_name = tokens[curr_idx].name.to_owned();
 
 					if token_name != *elem {
-						return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
+						return Err(Error::NotMatching(pattern.name().to_owned()));
 					}
 
 					nodes.push((token_name, N::new_token(&tokens[curr_idx])));
@@ -171,21 +171,21 @@ where
 				nodes.push((elem.to_owned(), res));
 				curr_idx += 1;
 			} else {
-				return Err((Error::UnknownElem(elem.to_owned()), self.pos.to_owned()));
+				return Err(Error::UnknownElem(elem.to_owned()));
 			}
 
 			if curr_idx >= tokens.len() {
-				return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
+				return Err(Error::NotMatching(pattern.name().to_owned()));
 			}
 		}
 
 		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => Ok(x),
-			Err(e) => Err((Error::PatternFunc(e), self.pos.to_owned()))
+			Err(e) => Err(Error::PatternFunc(e))
 		}
 	}
 
-	fn eval_pattern_by_name(&mut self, tokens: &[Token], pattern_name: &str) -> Result<N, (Error<E>, Position)> {
+	fn eval_pattern_by_name(&mut self, tokens: &[Token], pattern_name: &str) -> Result<N, Error<E>> {
 		let patterns: Vec<Pattern<N, E>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
@@ -200,10 +200,10 @@ where
 			}
 		}
 
-		Err((Error::NotMatching(pattern_name.to_owned()), self.pos.to_owned()))
+		Err(Error::NotMatching(pattern_name.to_owned()))
 	}
 
-	pub fn parse(&mut self, tokens: &[Token]) -> Result<N, (Error<E>, Position)> {
+	pub fn parse(&mut self, tokens: &[Token]) -> Result<N, Error<E>> {
 		self.eval_pattern_by_name(tokens, "program")
 	}
 }

@@ -153,27 +153,29 @@ where
 		for (idx, elem) in pattern.elems().iter().enumerate() {
 			if self.is_elem_token(elem) {
 				while nodes.len() <= idx {
+					let token_name = tokens[curr_idx].name.to_owned();
+
+					if token_name != *elem {
+						return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
+					}
+
+					nodes.push((token_name, N::new_token(&tokens[curr_idx])));
 					curr_idx += 1;
-
-					if curr_idx >= tokens.len() {
-						return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
-					}
-
-					nodes.push((tokens[curr_idx].name.to_owned(), N::new_token(&tokens[curr_idx])));
-
-					if nodes[curr_idx].0 != *elem {
-						return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
-					}
 				}
 			} else if self.is_elem_node(elem) {
-				let res_node = match self.eval_pattern_by_name(&tokens[curr_idx..], elem) {
+				let res = match self.eval_pattern_by_name(&tokens[curr_idx..], elem) {
 					Ok(x) => x,
 					Err(e) => return Err(e)
 				};
 
-				nodes.push((elem.to_owned(), res_node));
+				nodes.push((elem.to_owned(), res));
+				curr_idx += 1;
 			} else {
 				return Err((Error::UnknownElem(elem.to_owned()), self.pos.to_owned()));
+			}
+
+			if curr_idx >= tokens.len() {
+				return Err((Error::NotMatching(pattern.name().to_owned()), self.pos.to_owned()));
 			}
 		}
 

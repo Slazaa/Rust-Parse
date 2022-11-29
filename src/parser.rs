@@ -1,6 +1,6 @@
 use std::fmt::{self, Debug};
 
-use crate::{Pattern, ASTNode, Position, Token};
+use crate::{Pattern, ASTNode, Token};
 
 #[derive(Debug)]
 pub enum Error<E> {
@@ -36,8 +36,7 @@ where
 	E: Clone
 {
 	token_names: Vec<String>,
-	patterns: Vec<Pattern<N, E>>,
-	pos: Position
+	patterns: Vec<Pattern<N, E>>
 }
 
 impl<N, E> Parser<N, E>
@@ -51,8 +50,7 @@ where
 
 		Self {
 			token_names: token_names.to_owned(),
-			patterns: patterns.to_owned(),
-			pos: Position::default()
+			patterns: patterns.to_owned()
 		}
 	}
 
@@ -189,13 +187,13 @@ where
 		let patterns: Vec<Pattern<N, E>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
-			return Err((Error::InvalidPatternName(pattern_name.to_owned()), self.pos.to_owned()));
+			return Err(Error::InvalidPatternName(pattern_name.to_owned()));
 		}
 
 		for pattern in &patterns {
 			match self.eval_pattern(tokens, pattern) {
 				Ok(node) => return Ok(node),
-				Err((Error::NotMatching(_), _)) => (),
+				Err(Error::NotMatching(_)) => (),
 				Err(e) => return Err(e)
 			}
 		}

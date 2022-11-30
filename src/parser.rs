@@ -126,39 +126,29 @@ where
 	}
 	*/
 	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, ParserError<E>> {
+		let elems = pattern.elems();
+
+		if tokens.len() < elems.len() {
+			return Err(ParserError::NotMatching(pattern.name().to_owned()));
+		} 
+
 		let mut nodes = Vec::new();
-		let mut curr_idx = 0;
 
-		for (idx, elem) in pattern.elems().iter().enumerate() {
+		for (idx, elem) in elems.iter().enumerate() {
 			if self.is_elem_token(elem) {
-				while nodes.len() <= idx {
-					let token_name = tokens[curr_idx].name.to_owned();
-
-					if token_name != *elem {
-						return Err(ParserError::NotMatching(pattern.name().to_owned()));
-					}
-
-					nodes.push((token_name, N::new_token(&tokens[curr_idx])));
-					curr_idx += 1;
+				if &tokens[idx].name != elem {
+					return Err(ParserError::NotMatching(pattern.name().to_owned()));
 				}
-			} else if self.is_elem_node(elem) {
-				let res = match self.eval_pattern_by_name(&tokens[curr_idx..], elem) {
-					Ok(x) => x,
-					Err(e) => return Err(e)
-				};
 
-				nodes.push((elem.to_owned(), res));
-				curr_idx += 1;
+				nodes.push((elem, N::new_token(&tokens[idx])));
+			} else if self.is_elem_node(elem) {
+				nodes.push((elem, self.eval_pattern_by_name(&tokens[idx..], elem)?));
 			} else {
 				return Err(ParserError::UnknownElem(elem.to_owned()));
 			}
-
-			if curr_idx >= tokens.len() {
-				return Err(ParserError::NotMatching(pattern.name().to_owned()));
-			}
 		}
 
-		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
+		match pattern.func()(&nodes.iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => Ok(x),
 			Err(e) => Err(ParserError::PatternFunc(e))
 		}

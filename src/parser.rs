@@ -1,33 +1,15 @@
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
 use crate::{Pattern, ASTNode, Token};
 
 #[derive(Debug)]
-pub enum Error<E> {
+pub enum ParserError<E> {
 	FileNotFound(String),
 	InvalidPatternName(String),
-	InvalidToken,
 	NotMatching(String),
+	PatternFunc(E),
 	TokenRemaining,
-	UnknownElem(String),
-	PatternFunc(E)
-}
-
-impl<E> fmt::Display for Error<E>
-where
-	E: fmt::Display
-{
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{}", match self {
-			Self::FileNotFound(filename) => format!("File not found '{}'", filename),
-			Self::InvalidPatternName(name) => format!("Invalid pattern name '{}'", name),
-			Self::InvalidToken => "Invalid token".to_owned(),
-			Self::NotMatching(pattern_name) => format!("Could not find match for pattern '{}'", pattern_name),
-			Self::TokenRemaining => "Unused token remaining".to_owned(),
-			Self::UnknownElem(elem) => format!("Unknown element '{}'", elem),
-			Self::PatternFunc(err) => format!("{}", err)
-		})
-	}
+	UnknownElem(String)
 }
 
 pub struct Parser<N, E>
@@ -144,7 +126,7 @@ where
 		Ok(res_node)
 	}
 	*/
-	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, Error<E>> {
+	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, ParserError<E>> {
 		let mut nodes = Vec::new();
 		let mut curr_idx = 0;
 
@@ -154,7 +136,7 @@ where
 					let token_name = tokens[curr_idx].name.to_owned();
 
 					if token_name != *elem {
-						return Err(Error::NotMatching(pattern.name().to_owned()));
+						return Err(ParserError::NotMatching(pattern.name().to_owned()));
 					}
 
 					nodes.push((token_name, N::new_token(&tokens[curr_idx])));
@@ -169,39 +151,39 @@ where
 				nodes.push((elem.to_owned(), res));
 				curr_idx += 1;
 			} else {
-				return Err(Error::UnknownElem(elem.to_owned()));
+				return Err(ParserError::UnknownElem(elem.to_owned()));
 			}
 
 			if curr_idx >= tokens.len() {
-				return Err(Error::NotMatching(pattern.name().to_owned()));
+				return Err(ParserError::NotMatching(pattern.name().to_owned()));
 			}
 		}
 
 		match pattern.func()(&nodes[..pattern.elems().len()].iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => Ok(x),
-			Err(e) => Err(Error::PatternFunc(e))
+			Err(e) => Err(ParserError::PatternFunc(e))
 		}
 	}
 
-	fn eval_pattern_by_name(&mut self, tokens: &[Token], pattern_name: &str) -> Result<N, Error<E>> {
+	fn eval_pattern_by_name(&mut self, tokens: &[Token], pattern_name: &str) -> Result<N, ParserError<E>> {
 		let patterns: Vec<Pattern<N, E>> = self.patterns.iter().filter(|x| x.name() == pattern_name).cloned().collect();
 
 		if patterns.is_empty() {
-			return Err(Error::InvalidPatternName(pattern_name.to_owned()));
+			return Err(ParserError::InvalidPatternName(pattern_name.to_owned()));
 		}
 
 		for pattern in &patterns {
 			match self.eval_pattern(tokens, pattern) {
 				Ok(node) => return Ok(node),
-				Err(Error::NotMatching(_)) => (),
+				Err(ParserError::NotMatching(_)) => (),
 				Err(e) => return Err(e)
 			}
 		}
 
-		Err(Error::NotMatching(pattern_name.to_owned()))
+		Err(ParserError::NotMatching(pattern_name.to_owned()))
 	}
 
-	pub fn parse(&mut self, tokens: &[Token]) -> Result<N, Error<E>> {
+	pub fn parse(&mut self, tokens: &[Token]) -> Result<N, ParserError<E>> {
 		self.eval_pattern_by_name(tokens, "program")
 	}
 }

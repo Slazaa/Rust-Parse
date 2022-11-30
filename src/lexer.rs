@@ -1,8 +1,13 @@
-use std::{fs, marker::PhantomData};
+use std::fs;
 
 use regex::Match;
 
-use crate::{Rule, Token, Position, Error, Loc};
+use crate::{Rule, Token, Position, Loc};
+
+pub enum LexerError {
+	FileNotFound(String),
+	InvalidToken(Position)
+}
 
 #[derive(Clone)]
 pub struct Lexer {
@@ -26,7 +31,7 @@ impl Lexer {
 		&self.ignore_rules
 	}
 
-	pub fn lex<E>(&self, input: &str) -> Result<Vec<Token>, (Error<E>, Position)> {
+	pub fn lex<E>(&self, input: &str) -> Result<Vec<Token>, LexerError> {
 		let mut res = Vec::new();
 		let lexer_stream = LexerStream::new(self, input, None);
 
@@ -37,36 +42,30 @@ impl Lexer {
 		Ok(res)
 	}
 
-	pub fn lex_from_file<E>(&self, filename: &str) -> Result<Vec<Token>, (Error<E>, Option<Position>)> {
+	pub fn lex_from_file<E>(&self, filename: &str) -> Result<Vec<Token>, LexerError> {
 		let input = match fs::read_to_string(filename) {
 			Ok(x) => x,
-			Err(_) => return Err((Error::FileNotFound(filename.to_owned()), None))
+			Err(_) => return Err(LexerError::FileNotFound(filename.to_owned()))
 		};
 
 		let mut res = Vec::new();
 		let lexer_stream = LexerStream::new(self, &input, Some(filename.to_owned()));
 
 		for token in lexer_stream {
-			let token = match token {
-				Ok(x) => x,
-				Err((e, pos)) => return Err((e, Some(pos)))
-			};
-
-			res.push(token);
+			res.push(token?);
 		}
 
 		Ok(res)
 	}
 }
 
-pub struct LexerStream<E> {
+pub struct LexerStream {
 	lexer: Lexer,
 	input: String,
-	loc: Loc,
-	phantom: PhantomData<E>
+	loc: Loc
 }
 
-impl<E> LexerStream<E> {
+impl LexerStream {
 	pub fn new(lexer: &Lexer, input: &str, filename: Option<String>) -> Self {
 		Self {
 			lexer: lexer.clone(),
@@ -74,8 +73,7 @@ impl<E> LexerStream<E> {
 			loc: Loc {
 				filename,
 				..Default::default()
-			},
-			phantom: PhantomData
+			}
 		}
 	}
 
@@ -94,8 +92,8 @@ impl<E> LexerStream<E> {
 	}
 }
 
-impl<E> Iterator for LexerStream<E> {
-	type Item = Result<Token, (Error<E>, Position)>;
+impl Iterator for LexerStream {
+	type Item = Result<Token, LexerError>;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.loc.start = self.loc.end.to_owned();
@@ -133,6 +131,6 @@ impl<E> Iterator for LexerStream<E> {
 			}
 		}
 
-		Some(Err((Error::InvalidToken, self.loc.end.to_owned())))
+		Some(Err(LexerError::InvalidToken(self.loc.end.to_owned())))
 	}
 }

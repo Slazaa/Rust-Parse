@@ -4,7 +4,6 @@ use crate::{Pattern, ASTNode, Token};
 
 #[derive(Debug)]
 pub enum ParserError<E> {
-	FileNotFound(String),
 	InvalidPatternName(String),
 	NotMatching(String),
 	PatternFunc(E),

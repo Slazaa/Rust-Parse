@@ -148,6 +148,8 @@ where
 			}
 		}
 
+		println!("{:#?}", nodes);
+
 		match pattern.func()(&nodes.iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => Ok(x),
 			Err(e) => Err(ParserError::PatternFunc(e))

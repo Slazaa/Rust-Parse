@@ -17,7 +17,8 @@ where
 	E: Clone
 {
 	token_names: Vec<String>,
-	patterns: Vec<Pattern<N, E>>
+	patterns: Vec<Pattern<N, E>>,
+	token_remaining: bool
 }
 
 impl<N, E> Parser<N, E>
@@ -31,7 +32,8 @@ where
 
 		Self {
 			token_names: token_names.to_owned(),
-			patterns: patterns.to_owned()
+			patterns: patterns.to_owned(),
+			token_remaining: true
 		}
 	}
 
@@ -70,6 +72,10 @@ where
 			}
 		}
 
+		if self.token_remaining && idx >= tokens.len() {
+			self.token_remaining = false;
+		}
+
 		match pattern.func()(&nodes.iter().map(|(_, x)| x).cloned().collect::<Vec<N>>()) {
 			Ok(x) => Ok((x, idx)),
 			Err(e) => Err(ParserError::PatternFunc(e))
@@ -95,6 +101,12 @@ where
 	}
 
 	pub fn parse(&mut self, tokens: &[Token]) -> Result<N, ParserError<E>> {
-		Ok(self.eval_pattern_by_name(tokens, "program")?.0)
+		let res = self.eval_pattern_by_name(tokens, "program")?.0;
+
+		if self.token_remaining {
+			return Err(ParserError::TokenRemaining);
+		}
+
+		Ok(res)
 	}
 }

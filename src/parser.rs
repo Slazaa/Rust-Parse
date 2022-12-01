@@ -127,15 +127,14 @@ where
 	*/
 	fn eval_pattern(&mut self, tokens: &[Token], pattern: &Pattern<N, E>) -> Result<N, ParserError<E>> {
 		let elems = pattern.elems();
-
-		if tokens.len() < elems.len() {
-			return Err(ParserError::NotMatching(pattern.name().to_owned()));
-		} 
-
 		let mut nodes = Vec::new();
 
 		for (idx, elem) in elems.iter().enumerate() {
 			if self.is_elem_token(elem) {
+				if idx >= tokens.len() {
+					return Err(ParserError::NotMatching(pattern.name().to_owned()));
+				}
+
 				if &tokens[idx].name != elem {
 					return Err(ParserError::NotMatching(pattern.name().to_owned()));
 				}
